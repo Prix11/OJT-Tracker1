@@ -535,8 +535,14 @@
               toast.textContent = "Saved — returning home…";
               window.location.href = "index.html";
             })
-            .catch(function () {
-              err.textContent = "Could not save. Check that this page is opened from the same folder (db.js required).";
+            .catch(function (e) {
+              var msg = e && e.message;
+              if (!msg) {
+                msg = OJTApp.isCloud()
+                  ? "Could not save to the cloud. Check Firestore rules (Firebase Console → Firestore → Rules → Publish)."
+                  : "Could not save. Use this site over https (not opening the file directly) and allow storage.";
+              }
+              err.textContent = msg;
               btn.disabled = false;
             });
         });

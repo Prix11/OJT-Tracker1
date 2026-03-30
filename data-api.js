@@ -145,8 +145,19 @@
     },
 
     addEntry: function (entry, user) {
-      if (isCloud() && user.uid) {
-        return OJTCloud.addEntry(user.uid, user.email, entry);
+      if (isCloud()) {
+        var cu =
+          typeof firebase !== "undefined" && firebase.auth
+            ? firebase.auth().currentUser
+            : null;
+        var uid = (user && user.uid) || (cu && cu.uid);
+        var email = (user && user.email) || (cu && cu.email);
+        if (!uid) {
+          return Promise.reject(
+            new Error("Not signed in for cloud save. Open the dashboard and sign in again.")
+          );
+        }
+        return OJTCloud.addEntry(uid, email, entry);
       }
       return OJTDB.addEntry(entry, user.email);
     }

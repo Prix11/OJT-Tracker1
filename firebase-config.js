@@ -8,6 +8,6 @@ window.OJT_FIREBASE_CONFIG = {
   projectId: "ojt-tracker-a5903",
   storageBucket: "ojt-tracker-a5903.firebasestorage.app",
   messagingSenderId: "167990524706",
-  appId: "1:167990524706:web:dcd1ba3d87e084e51a037b",
-  measurementId: "G-50HH79NR5T"
+  appId: "1:167990524706:web:6389b132b5befc911a037b",
+  measurementId: "G-91TQWPB706"
 };

@@ -83,6 +83,23 @@
     return (err && err.message) || "Sign in failed.";
   }
 
+  function mapFirestoreError(err) {
+    var code = err && err.code;
+    if (code === "permission-denied") {
+      return (
+        "Firestore blocked saving your data. In Firebase Console open Firestore → Rules, " +
+        "publish rules that allow read/write under users/{userId} only when signed in " +
+        "(see firebase-config.example.js). Make sure you clicked Publish."
+      );
+    }
+    return null;
+  }
+
+  function ensureAuthToken(user) {
+    if (!user) return Promise.reject(new Error("Not signed in."));
+    return user.getIdToken(true);
+  }
+
   function firebaseInit() {
     if (!useCloud()) return Promise.resolve(false);
     if (!firebase.apps.length) {
@@ -194,6 +211,10 @@
   }
 
   function cloudAddEntry(uid, email, entry) {
+    var u = firebase.auth().currentUser;
+    if (!u || u.uid !== uid) {
+      return Promise.reject(new Error("Session expired. Sign in again from the dashboard."));
+    }
     entry.userEmail = (email || "").trim().toLowerCase();
     var ref = firebase
       .firestore()
@@ -201,9 +222,13 @@
       .doc(uid)
       .collection("entries")
       .doc(String(entry.id));
-    return ref.set(sanitize(entry)).then(function () {
-      return cloudSyncHoursFromEntries(uid);
-    });
+    return ensureAuthToken(u)
+      .then(function () {
+        return ref.set(sanitize(entry));
+      })
+      .then(function () {
+        return cloudSyncHoursFromEntries(uid);
+      });
   }
 
   function migrateLocalToCloud(uid, email) {
@@ -261,14 +286,19 @@
       })
       .then(function () {
         var u = firebase.auth().currentUser;
-        return migrateLocalToCloud(u.uid, u.email).then(function () {
+        return ensureAuthToken(u).then(function () {
+          return migrateLocalToCloud(u.uid, u.email);
+        }).then(function () {
           return cloudSyncHoursFromEntries(u.uid);
         }).then(function () {
           return { ok: true, email: u.email, isFirst: false };
         });
       })
       .catch(function (err) {
-        return { ok: false, error: mapAuthError(err) };
+        return {
+          ok: false,
+          error: mapFirestoreError(err) || mapAuthError(err)
+        };
       });
   }
 
@@ -280,14 +310,19 @@
       })
       .then(function () {
         var u = firebase.auth().currentUser;
-        return migrateLocalToCloud(u.uid, u.email).then(function () {
+        return ensureAuthToken(u).then(function () {
+          return migrateLocalToCloud(u.uid, u.email);
+        }).then(function () {
           return cloudSyncHoursFromEntries(u.uid);
         }).then(function () {
           return { ok: true, email: u.email };
         });
       })
       .catch(function (err) {
-        return { ok: false, error: mapAuthError(err) };
+        return {
+          ok: false,
+          error: mapFirestoreError(err) || mapAuthError(err)
+        };
       });
   }
 
