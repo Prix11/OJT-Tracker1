@@ -105,8 +105,13 @@
     if (!firebase.apps.length) {
       firebase.initializeApp(global.OJT_FIREBASE_CONFIG);
     }
-    return firebase
-      .firestore()
+    var db = firebase.firestore();
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch (e) {
+      /* settings() may only run once per app */
+    }
+    return db
       .enablePersistence({ synchronizeTabs: true })
       .catch(function () {
         return;
@@ -125,8 +130,13 @@
 
   function cloudWaitForAuth() {
     if (!useCloud()) return Promise.resolve();
+    var auth = firebase.auth();
+    /* Wait until initial session restore finishes (avoids first callback = null race). */
+    if (typeof auth.authStateReady === "function") {
+      return auth.authStateReady();
+    }
     return new Promise(function (resolve) {
-      var unsub = firebase.auth().onAuthStateChanged(function () {
+      var unsub = auth.onAuthStateChanged(function () {
         unsub();
         resolve();
       });
@@ -212,14 +222,17 @@
 
   function cloudAddEntry(uid, email, entry) {
     var u = firebase.auth().currentUser;
-    if (!u || u.uid !== uid) {
+    if (!u) {
       return Promise.reject(new Error("Session expired. Sign in again from the dashboard."));
     }
-    entry.userEmail = (email || "").trim().toLowerCase();
+    var docUid = u.uid;
+    entry.userEmail = ((email != null && email !== "") ? email : u.email || "")
+      .trim()
+      .toLowerCase();
     var ref = firebase
       .firestore()
       .collection("users")
-      .doc(uid)
+      .doc(docUid)
       .collection("entries")
       .doc(String(entry.id));
     return ensureAuthToken(u)
@@ -227,7 +240,11 @@
         return ref.set(sanitize(entry));
       })
       .then(function () {
-        return cloudSyncHoursFromEntries(uid);
+        return cloudSyncHoursFromEntries(docUid).catch(function (syncErr) {
+          if (typeof console !== "undefined" && console.warn) {
+            console.warn("OJT: entry saved; dashboard totals sync failed", syncErr);
+          }
+        });
       });
   }
 

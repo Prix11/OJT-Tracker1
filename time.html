@@ -537,10 +537,16 @@
             })
             .catch(function (e) {
               var msg = e && e.message;
-              if (!msg) {
+              if (e && e.code === "permission-denied") {
+                msg =
+                  "Firestore blocked this save. In Firebase Console → Firestore → Rules, publish rules that allow read/write under users/{userId} when signed in (see firebase-config.example.js).";
+              } else if (!msg) {
                 msg = OJTApp.isCloud()
-                  ? "Could not save to the cloud. Check Firestore rules (Firebase Console → Firestore → Rules → Publish)."
+                  ? "Could not save to the cloud. Check Firestore rules and that you are signed in."
                   : "Could not save. Use this site over https (not opening the file directly) and allow storage.";
+              }
+              if (typeof console !== "undefined" && console.error) {
+                console.error("OJT save entry failed", e);
               }
               err.textContent = msg;
               btn.disabled = false;
