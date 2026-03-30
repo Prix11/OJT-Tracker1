@@ -107,7 +107,8 @@
     }
     var db = firebase.firestore();
     try {
-      db.settings({ ignoreUndefinedProperties: true });
+      /* merge: true keeps Firestore’s internal host/cache settings; only adds ignoreUndefinedProperties */
+      db.settings({ ignoreUndefinedProperties: true, merge: true });
     } catch (e) {
       /* settings() may only run once per app */
     }
