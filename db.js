@@ -270,6 +270,28 @@
       });
   }
 
+  function updateEntry(entry, userEmail) {
+    return addEntry(entry, userEmail);
+  }
+
+  function deleteEntry(entryId, userEmail) {
+    var norm = normalizeUserEmail(userEmail);
+    if (!norm) return Promise.reject(new Error("Missing user"));
+    return openDatabase().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(STORE_ENTRIES, "readwrite");
+        var store = tx.objectStore(STORE_ENTRIES);
+        store.delete(entryId);
+        tx.oncomplete = function () {
+          syncHoursFromEntries(norm).then(resolve).catch(reject);
+        };
+        tx.onerror = function () {
+          reject(tx.error);
+        };
+      });
+    });
+  }
+
   function getHoursData(userEmail) {
     var norm = normalizeUserEmail(userEmail);
     if (!norm) {
@@ -305,6 +327,8 @@
   global.OJTDB = {
     init: init,
     addEntry: addEntry,
+    updateEntry: updateEntry,
+    deleteEntry: deleteEntry,
     getAllEntries: getAllEntriesForUser,
     getAllEntriesRaw: getAllEntriesFromDb,
     syncHoursFromEntries: syncHoursFromEntries,

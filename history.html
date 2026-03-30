@@ -217,6 +217,142 @@
       flex-wrap: wrap;
       justify-content: flex-end;
     }
+
+    td.actions {
+      white-space: nowrap;
+    }
+
+    .btn-row {
+      font: inherit;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface-hover);
+      color: var(--text);
+      margin-right: 0.35rem;
+    }
+
+    .btn-row:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-row.danger {
+      color: var(--danger);
+      border-color: rgba(232, 93, 93, 0.45);
+    }
+
+    .btn-row.danger:hover {
+      background: rgba(232, 93, 93, 0.12);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay[hidden] {
+      display: none !important;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h2 {
+      margin: 0 0 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .field {
+      margin-bottom: 0.85rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.9375rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      align-items: center;
+    }
+
+    .modal-actions .btn-primary {
+      background: var(--accent);
+      color: #0f1419;
+      border: none;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .modal-actions .btn-primary:hover {
+      background: var(--accent-dim);
+    }
+
+    .modal-actions .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .modal-actions .btn-secondary:hover {
+      color: var(--text);
+    }
+
+    .modal-error {
+      color: var(--danger);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -250,12 +386,50 @@
                 <th scope="col" class="num">OT (hrs)</th>
                 <th scope="col" class="num">Net (hrs)</th>
                 <th scope="col" class="num">Total (hrs)</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
           </table>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="edit-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="modal">
+      <h2 id="edit-modal-title">Edit entry</h2>
+      <form id="form-edit" novalidate>
+        <div class="field">
+          <label for="edit-date">Date</label>
+          <input id="edit-date" name="date" type="date" required />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="edit-time-in">Time in</label>
+            <input id="edit-time-in" name="timeIn" type="time" required />
+          </div>
+          <div class="field">
+            <label for="edit-time-out">Time out</label>
+            <input id="edit-time-out" name="timeOut" type="time" required />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="edit-break">Break (minutes)</label>
+            <input id="edit-break" name="breakMinutes" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="edit-ot">Overtime (hours)</label>
+            <input id="edit-ot" name="overtimeHours" type="number" min="0" step="0.25" value="0" />
+          </div>
+        </div>
+        <p id="edit-error" class="modal-error" role="alert"></p>
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary" id="btn-save-edit">Save changes</button>
+          <button type="button" class="btn-secondary" id="btn-cancel-edit">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -272,6 +446,9 @@
       function $(id) {
         return document.getElementById(id);
       }
+
+      var currentUser = null;
+      var editingEntryId = null;
 
       function formatTime(t) {
         if (!t) return "—";
@@ -309,6 +486,79 @@
           if (db !== da) return db < da ? -1 : 1;
           return (b.createdAt || 0) - (a.createdAt || 0);
         });
+      }
+
+      function parseGrossHours(dateStr, tIn, tOut) {
+        var start = new Date(dateStr + "T" + tIn + ":00");
+        var end = new Date(dateStr + "T" + tOut + ":00");
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return NaN;
+        if (end <= start) {
+          end.setDate(end.getDate() + 1);
+        }
+        return (end - start) / 3600000;
+      }
+
+      function readEditFormValues() {
+        var br = parseFloat($("edit-break").value, 10);
+        var ot = parseFloat($("edit-ot").value, 10);
+        if (isNaN(br) || br < 0) br = 0;
+        if (isNaN(ot) || ot < 0) ot = 0;
+        return { breakMinutes: br, overtimeHours: ot };
+      }
+
+      function buildEntryFromEditForm(existingEntry) {
+        var dateStr = $("edit-date").value;
+        var tIn = $("edit-time-in").value;
+        var tOut = $("edit-time-out").value;
+        var bo = readEditFormValues();
+        if (!dateStr || !tIn || !tOut) {
+          return { error: "Please fill in date, time in, and time out." };
+        }
+        var gross = parseGrossHours(dateStr, tIn, tOut);
+        if (isNaN(gross) || gross <= 0) {
+          return {
+            error: "Time out must be after time in (same day, or past midnight for night shifts)."
+          };
+        }
+        var breakH = bo.breakMinutes / 60;
+        if (breakH > gross + 1e-6) {
+          return { error: "Break cannot be longer than the gross shift." };
+        }
+        var net = Math.max(0, gross - breakH);
+        var total = net + bo.overtimeHours;
+        return {
+          entry: {
+            id: existingEntry.id,
+            date: dateStr,
+            timeIn: tIn,
+            timeOut: tOut,
+            breakMinutes: bo.breakMinutes,
+            overtimeHours: bo.overtimeHours,
+            grossHours: Math.round(gross * 1000) / 1000,
+            netHours: Math.round(net * 1000) / 1000,
+            totalHours: Math.round(total * 1000) / 1000,
+            createdAt: existingEntry.createdAt != null ? existingEntry.createdAt : Date.now(),
+            updatedAt: Date.now()
+          }
+        };
+      }
+
+      function openEditModal(entry) {
+        editingEntryId = entry.id;
+        $("edit-date").value = entry.date || "";
+        $("edit-time-in").value = entry.timeIn ? entry.timeIn.slice(0, 5) : "";
+        $("edit-time-out").value = entry.timeOut ? entry.timeOut.slice(0, 5) : "";
+        $("edit-break").value = String(entry.breakMinutes != null ? entry.breakMinutes : 0);
+        $("edit-ot").value = String(entry.overtimeHours != null ? entry.overtimeHours : 0);
+        $("edit-error").textContent = "";
+        $("edit-modal").hidden = false;
+        $("edit-date").focus();
+      }
+
+      function closeEditModal() {
+        editingEntryId = null;
+        $("edit-modal").hidden = true;
+        $("edit-error").textContent = "";
       }
 
       function render(entries) {
@@ -354,8 +604,35 @@
             "</td>" +
             '<td class="num total-cell">' +
             escapeHtml(formatNum(e.totalHours, 2)) +
+            "</td>" +
+            '<td class="actions">' +
+            '<button type="button" class="btn-row" data-action="edit">Edit</button>' +
+            '<button type="button" class="btn-row danger" data-action="delete">Delete</button>' +
             "</td>";
           tbody.appendChild(tr);
+          (function (entry) {
+            var editBtn = tr.querySelector('[data-action="edit"]');
+            var delBtn = tr.querySelector('[data-action="delete"]');
+            editBtn.addEventListener("click", function () {
+              openEditModal(entry);
+            });
+            delBtn.addEventListener("click", function () {
+              if (!confirm("Delete this attendance record? This cannot be undone.")) return;
+              OJTApp.init()
+                .then(function () {
+                  return OJTApp.deleteEntry(entry.id, currentUser);
+                })
+                .then(function () {
+                  return OJTApp.getAllEntries(currentUser);
+                })
+                .then(function (list) {
+                  render(list || []);
+                })
+                .catch(function (err) {
+                  alert((err && err.message) || "Could not delete.");
+                });
+            });
+          })(e);
         }
       }
 
@@ -371,8 +648,60 @@
         });
       }
 
+      function findEntryById(entries, id) {
+        for (var i = 0; i < entries.length; i++) {
+          if (String(entries[i].id) === String(id)) return entries[i];
+        }
+        return null;
+      }
+
       function init() {
         $("btn-logout").addEventListener("click", logout);
+
+        $("btn-cancel-edit").addEventListener("click", closeEditModal);
+        $("edit-modal").addEventListener("click", function (ev) {
+          if (ev.target === $("edit-modal")) closeEditModal();
+        });
+        document.addEventListener("keydown", function (ev) {
+          if (ev.key === "Escape" && !$("edit-modal").hidden) closeEditModal();
+        });
+
+        $("form-edit").addEventListener("submit", function (e) {
+          e.preventDefault();
+          var errEl = $("edit-error");
+          errEl.textContent = "";
+          if (!currentUser || editingEntryId == null) {
+            errEl.textContent = "Session error. Reload the page.";
+            return;
+          }
+          OJTApp.init()
+            .then(function () {
+              return OJTApp.getAllEntries(currentUser);
+            })
+            .then(function (entries) {
+              var existing = findEntryById(entries || [], editingEntryId);
+              if (!existing) {
+                errEl.textContent = "Entry not found.";
+                return Promise.resolve();
+              }
+              var built = buildEntryFromEditForm(existing);
+              if (built.error) {
+                errEl.textContent = built.error;
+                return Promise.resolve();
+              }
+              return OJTApp.updateEntry(built.entry, currentUser).then(function () {
+                closeEditModal();
+                return OJTApp.getAllEntries(currentUser);
+              });
+            })
+            .then(function (list) {
+              if (list === undefined) return;
+              render(list || []);
+            })
+            .catch(function (err) {
+              errEl.textContent = (err && err.message) || "Could not save changes.";
+            });
+        });
 
         OJTApp.init()
           .then(function () {
@@ -384,6 +713,7 @@
               window.location.href = "index.html";
               return;
             }
+            currentUser = user;
             $("user-pill").textContent = user.email;
             $("user-pill").title = user.email;
             return OJTApp.getAllEntries(user);

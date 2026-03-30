@@ -254,6 +254,35 @@
       });
   }
 
+  function cloudUpdateEntry(uid, email, entry) {
+    return cloudAddEntry(uid, email, entry);
+  }
+
+  function cloudDeleteEntry(uid, entryId) {
+    var u = firebase.auth().currentUser;
+    if (!u || String(u.uid) !== String(uid)) {
+      return Promise.reject(new Error("Session expired. Sign in again from the dashboard."));
+    }
+    var docUid = u.uid;
+    var ref = firebase
+      .firestore()
+      .collection("users")
+      .doc(docUid)
+      .collection("entries")
+      .doc(String(entryId));
+    return ensureAuthToken(u)
+      .then(function () {
+        return ref.delete();
+      })
+      .then(function () {
+        return cloudSyncHoursFromEntries(docUid).catch(function (syncErr) {
+          if (typeof console !== "undefined" && console.warn) {
+            console.warn("OJT: entry deleted; dashboard totals sync failed", syncErr);
+          }
+        });
+      });
+  }
+
   function migrateLocalToCloud(uid, email) {
     return OJTDB.init()
       .then(function () {
@@ -366,6 +395,8 @@
     getHoursData: cloudGetHoursData,
     syncHoursFromEntries: cloudSyncHoursFromEntries,
     setGoal: cloudSetGoal,
-    addEntry: cloudAddEntry
+    addEntry: cloudAddEntry,
+    updateEntry: cloudUpdateEntry,
+    deleteEntry: cloudDeleteEntry
   };
 })(typeof window !== "undefined" ? window : self);

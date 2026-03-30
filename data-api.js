@@ -160,6 +160,41 @@
         return OJTCloud.addEntry(uid, email, entry);
       }
       return OJTDB.addEntry(entry, user.email);
+    },
+
+    updateEntry: function (entry, user) {
+      if (isCloud()) {
+        var cu =
+          typeof firebase !== "undefined" && firebase.auth
+            ? firebase.auth().currentUser
+            : null;
+        var uid = (user && user.uid) || (cu && cu.uid);
+        var email = (user && user.email) || (cu && cu.email);
+        if (!uid) {
+          return Promise.reject(
+            new Error("Not signed in for cloud save. Open the dashboard and sign in again.")
+          );
+        }
+        return OJTCloud.updateEntry(uid, email, entry);
+      }
+      return OJTDB.updateEntry(entry, user.email);
+    },
+
+    deleteEntry: function (entryId, user) {
+      if (isCloud()) {
+        var cu =
+          typeof firebase !== "undefined" && firebase.auth
+            ? firebase.auth().currentUser
+            : null;
+        var uid = (user && user.uid) || (cu && cu.uid);
+        if (!uid) {
+          return Promise.reject(
+            new Error("Not signed in. Open the dashboard and sign in again.")
+          );
+        }
+        return OJTCloud.deleteEntry(uid, entryId);
+      }
+      return OJTDB.deleteEntry(entryId, user.email);
     }
   };
 
