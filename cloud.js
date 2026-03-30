@@ -4,6 +4,8 @@
  */
 (function (global) {
   var firebase = global.firebase;
+  /** Single init promise — Save calls OJTApp.init() again; Firestore allows enablePersistence only once. */
+  var firestoreInitPromise = null;
 
   function looksLikePlaceholder(str) {
     if (!str || typeof str !== "string") return true;
@@ -102,24 +104,27 @@
 
   function firebaseInit() {
     if (!useCloud()) return Promise.resolve(false);
+    if (firestoreInitPromise) return firestoreInitPromise;
     if (!firebase.apps.length) {
       firebase.initializeApp(global.OJT_FIREBASE_CONFIG);
     }
     var db = firebase.firestore();
-    try {
-      /* merge: true keeps Firestore’s internal host/cache settings; only adds ignoreUndefinedProperties */
-      db.settings({ ignoreUndefinedProperties: true, merge: true });
-    } catch (e) {
-      /* settings() may only run once per app */
-    }
-    return db
+    /* Persistence must run before other Firestore calls; only one enablePersistence per app lifetime. */
+    firestoreInitPromise = db
       .enablePersistence({ synchronizeTabs: true })
       .catch(function () {
+        /* offline cache unavailable (e.g. private mode) — app still works online */
         return;
       })
       .then(function () {
+        try {
+          db.settings({ ignoreUndefinedProperties: true, merge: true });
+        } catch (e) {
+          /* settings() may only run once */
+        }
         return true;
       });
+    return firestoreInitPromise;
   }
 
   function setPersistence(remember) {
