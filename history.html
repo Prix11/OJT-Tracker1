@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance history — OJT Hours Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a222c;
+      --surface-hover: #232d3a;
+      --border: #2d3a4a;
+      --text: #e8edf4;
+      --muted: #8b9aaf;
+      --accent: #3db88a;
+      --accent-dim: #2a8f6a;
+      --danger: #e85d5d;
+      --radius: 12px;
+      --shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Instrument Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(61, 184, 138, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61, 184, 138, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 960px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 0.35rem 0;
+    }
+
+    .back:hover {
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      margin: 0.35rem 0 1.25rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .user-pill {
+      font-size: 0.75rem;
+      color: var(--muted);
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 0 -0.25rem;
+      padding: 0 0.25rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    th {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover {
+      background: rgba(61, 184, 138, 0.06);
+    }
+
+    td.num {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    th.num {
+      text-align: right;
+    }
+
+    .total-cell {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--muted);
+      font-size: 0.9375rem;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      margin-top: 0.5rem;
+    }
+
+    .empty a {
+      color: var(--accent);
+    }
+
+    .error-msg {
+      color: var(--danger);
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .count-badge {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 0.5rem 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .top-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="bg-pattern" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="panel">
+        <div class="top-nav">
+          <a class="back" href="index.html">← Dashboard</a>
+          <div class="top-nav-right">
+            <span class="user-pill" id="user-pill" title=""></span>
+            <button type="button" class="btn-ghost" id="btn-logout">Log out</button>
+          </div>
+        </div>
+        <h1>Attendance history</h1>
+        <p class="sub">
+          All logged shifts for your account. <span class="count-badge" id="entry-count"></span>
+        </p>
+        <p id="load-error" class="error-msg" role="alert" hidden></p>
+        <div id="empty-state" class="empty" hidden>
+          No entries yet. <a href="time.html">Log time in / out</a> to add your first record.
+        </div>
+        <div id="table-container" class="table-wrap" hidden>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Time in</th>
+                <th scope="col">Time out</th>
+                <th scope="col" class="num">Break (min)</th>
+                <th scope="col" class="num">OT (hrs)</th>
+                <th scope="col" class="num">Net (hrs)</th>
+                <th scope="col" class="num">Total (hrs)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
+  <script src="db.js"></script>
+  <script src="cloud.js"></script>
+  <script src="data-api.js"></script>
+  <script>
+    (function () {
+      function $(id) {
+        return document.getElementById(id);
+      }
+
+      function formatTime(t) {
+        if (!t) return "—";
+        return t.length >= 5 ? t.slice(0, 5) : t;
+      }
+
+      function formatDate(iso) {
+        if (!iso) return "—";
+        var parts = iso.split("-");
+        if (parts.length !== 3) return iso;
+        var y = parts[0];
+        var m = parts[1];
+        var d = parts[2];
+        var monthNames = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
+        var mi = parseInt(m, 10) - 1;
+        if (mi >= 0 && mi < 12) {
+          return monthNames[mi] + " " + parseInt(d, 10) + ", " + y;
+        }
+        return iso;
+      }
+
+      function formatNum(n, decimals) {
+        if (n == null || isNaN(n)) return "—";
+        var r = Math.round(n * Math.pow(10, decimals)) / Math.pow(10, decimals);
+        return String(r % 1 === 0 ? r : r.toFixed(decimals).replace(/\.?0+$/, ""));
+      }
+
+      function sortEntries(entries) {
+        return entries.slice().sort(function (a, b) {
+          var da = (a.date || "") + "T" + (a.timeIn || "00:00");
+          var db = (b.date || "") + "T" + (b.timeIn || "00:00");
+          if (db !== da) return db < da ? -1 : 1;
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        });
+      }
+
+      function render(entries) {
+        var tbody = $("tbody");
+        var empty = $("empty-state");
+        var table = $("table-container");
+        var countEl = $("entry-count");
+        tbody.innerHTML = "";
+
+        if (!entries.length) {
+          empty.hidden = false;
+          table.hidden = true;
+          countEl.textContent = "";
+          return;
+        }
+
+        empty.hidden = true;
+        table.hidden = false;
+        countEl.textContent = entries.length + " record" + (entries.length === 1 ? "" : "s");
+
+        var sorted = sortEntries(entries);
+        for (var i = 0; i < sorted.length; i++) {
+          var e = sorted[i];
+          var tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" +
+            escapeHtml(formatDate(e.date)) +
+            "</td>" +
+            "<td>" +
+            escapeHtml(formatTime(e.timeIn)) +
+            "</td>" +
+            "<td>" +
+            escapeHtml(formatTime(e.timeOut)) +
+            "</td>" +
+            '<td class="num">' +
+            escapeHtml(String(e.breakMinutes != null ? e.breakMinutes : 0)) +
+            "</td>" +
+            '<td class="num">' +
+            escapeHtml(formatNum(e.overtimeHours, 2)) +
+            "</td>" +
+            '<td class="num">' +
+            escapeHtml(formatNum(e.netHours, 2)) +
+            "</td>" +
+            '<td class="num total-cell">' +
+            escapeHtml(formatNum(e.totalHours, 2)) +
+            "</td>";
+          tbody.appendChild(tr);
+        }
+      }
+
+      function escapeHtml(s) {
+        var div = document.createElement("div");
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function logout() {
+        OJTApp.logout().then(function () {
+          window.location.href = "index.html";
+        });
+      }
+
+      function init() {
+        $("btn-logout").addEventListener("click", logout);
+
+        OJTApp.init()
+          .then(function () {
+            return OJTApp.waitForAuth();
+          })
+          .then(function () {
+            var user = OJTApp.getUser();
+            if (!user || !user.email) {
+              window.location.href = "index.html";
+              return;
+            }
+            $("user-pill").textContent = user.email;
+            $("user-pill").title = user.email;
+            return OJTApp.getAllEntries(user);
+          })
+          .then(function (entries) {
+            if (entries === undefined) return;
+            render(entries || []);
+          })
+          .catch(function (err) {
+            $("load-error").hidden = false;
+            $("load-error").textContent =
+              "Could not load history. Check Firebase config or open this folder over http(s).";
+            $("empty-state").hidden = true;
+            $("table-container").hidden = true;
+          });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

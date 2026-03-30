@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OJT Hours Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a222c;
+      --surface-hover: #232d3a;
+      --border: #2d3a4a;
+      --text: #e8edf4;
+      --muted: #8b9aaf;
+      --accent: #3db88a;
+      --accent-dim: #2a8f6a;
+      --danger: #e85d5d;
+      --radius: 12px;
+      --shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Instrument Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Subtle grid background */
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(61, 184, 138, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61, 184, 138, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 2rem 1.75rem;
+      box-shadow: var(--shadow);
+    }
+
+    .panel.wide {
+      max-width: 560px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #0a0f12;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      margin: 0.15rem 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font: inherit;
+      font-size: 0.9375rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 184, 138, 0.2);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .row label {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+
+    .row input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0f12;
+    }
+
+    .btn-primary:hover {
+      background: #4bc896;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      width: auto;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .error {
+      font-size: 0.8125rem;
+      color: var(--danger);
+      margin: -0.5rem 0 1rem;
+      min-height: 1.25rem;
+    }
+
+    .hint {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8125rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .sync-banner {
+      font-size: 0.8125rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      line-height: 1.45;
+    }
+
+    .sync-banner.warn {
+      background: rgba(232, 184, 93, 0.12);
+      border: 1px solid rgba(232, 184, 93, 0.35);
+      color: #c9a86a;
+    }
+
+    .sync-banner.ok {
+      background: rgba(61, 184, 138, 0.12);
+      border: 1px solid rgba(61, 184, 138, 0.35);
+      color: #7fd4a8;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.55rem 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .auth-tab:hover {
+      color: var(--text);
+    }
+
+    .auth-tab.active {
+      color: var(--text);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(61, 184, 138, 0.25);
+    }
+
+    .form-panel {
+      display: none;
+    }
+
+    .form-panel.active {
+      display: block;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    /* Landing */
+    header.landing-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .greeting {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      margin: 0.25rem 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-input {
+      width: 100%;
+      max-width: 100%;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.4rem 0.55rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .stat-input::placeholder {
+      color: var(--muted);
+      font-weight: 600;
+      opacity: 0.85;
+    }
+
+    .stat-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 184, 138, 0.2);
+    }
+
+    .stat-input::-webkit-outer-spin-button,
+    .stat-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .stat-input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .actions .btn,
+    .actions a.btn {
+      width: auto;
+      flex: 1;
+      min-width: 140px;
+      text-decoration: none;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .actions .btn-secondary {
+      background: var(--surface-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .actions .btn-secondary:hover {
+      border-color: var(--accent);
+    }
+
+    .footer-note {
+      margin-top: 1.5rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+
+    .footer-actions {
+      margin: 0.75rem 0 0;
+    }
+
+    .footer-actions .btn-ghost {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    @media (max-width: 480px) {
+      .panel {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="bg-pattern" aria-hidden="true"></div>
+    <div class="wrap">
+      <!-- Login -->
+      <section id="view-login" class="view active" aria-labelledby="login-title">
+        <div class="panel">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">OJT</div>
+            <div>
+              <h1 id="login-title">Hours Tracker</h1>
+              <p>Sign in to log your training time</p>
+            </div>
+          </div>
+          <div id="sync-mode-banner" class="sync-banner warn" role="status" hidden></div>
+          <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab active" id="tab-signin" role="tab" aria-selected="true" aria-controls="panel-login">
+              Sign in
+            </button>
+            <button type="button" class="auth-tab" id="tab-register" role="tab" aria-selected="false" aria-controls="panel-register">
+              Create account
+            </button>
+          </div>
+
+          <div class="row" style="margin-bottom: 1rem">
+            <label>
+              <input id="remember" type="checkbox" />
+              Remember me
+            </label>
+          </div>
+
+          <div id="panel-login" class="form-panel active" role="tabpanel" aria-labelledby="tab-signin">
+            <form id="form-login" novalidate>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" autocomplete="username" required placeholder="you@school.edu" />
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+              <p id="login-error" class="error" role="alert"></p>
+              <button type="submit" class="btn btn-primary">Sign in</button>
+            </form>
+          </div>
+
+          <div id="panel-register" class="form-panel" role="tabpanel" aria-labelledby="tab-register">
+            <form id="form-register" novalidate>
+              <label for="reg-email">Email</label>
+              <input id="reg-email" name="regEmail" type="email" autocomplete="email" required placeholder="you@school.edu" />
+              <label for="reg-password">Password</label>
+              <input id="reg-password" name="regPassword" type="password" autocomplete="new-password" required placeholder="At least 6 characters" minlength="6" />
+              <label for="reg-password2">Confirm password</label>
+              <input id="reg-password2" name="regPassword2" type="password" autocomplete="new-password" required placeholder="Repeat password" />
+              <p id="register-error" class="error" role="alert"></p>
+              <button type="submit" class="btn btn-primary">Create account</button>
+            </form>
+          </div>
+
+          <p class="hint" id="setup-hint">
+            After you publish this site, use Firebase so the same login works on any phone or computer. See <code>firebase-config.example.js</code> and <code>DEPLOY.md</code>.
+          </p>
+        </div>
+      </section>
+
+      <!-- Landing -->
+      <section id="view-landing" class="view" aria-labelledby="landing-greeting">
+        <div class="panel wide">
+          <header class="landing-head">
+            <div>
+              <h2 id="landing-greeting" class="greeting">Welcome back</h2>
+              <p class="sub" id="landing-sub">Your OJT hour summary — log time in, breaks, and overtime on the time page.</p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="btn-logout">Log out</button>
+          </header>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-value" id="stat-week">0</div>
+              <div class="stat-label">This week (hrs)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="stat-total">0</div>
+              <div class="stat-label">Total OJT (hrs)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="stat-overtime">0</div>
+              <div class="stat-label">Overtime (hrs)</div>
+            </div>
+            <div class="stat">
+              <input
+                type="number"
+                id="input-goal"
+                class="stat-input"
+                min="0"
+                step="0.25"
+                placeholder="Set target"
+                inputmode="decimal"
+                autocomplete="off"
+                aria-label="Target OJT hours"
+              />
+              <div class="stat-label">Target (hrs)</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="stat-remaining">—</div>
+              <div class="stat-label">Remaining (hrs)</div>
+            </div>
+          </div>
+          <div class="actions">
+            <a class="btn btn-primary" href="time.html">Log time in / out</a>
+            <a class="btn btn-secondary" href="history.html">View history</a>
+          </div>
+          <p class="footer-note">Signed in as <strong id="landing-email"></strong></p>
+          <p class="footer-actions">
+            <button type="button" class="btn btn-ghost" id="btn-logout-footer">Log out</button>
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
+  <script src="db.js"></script>
+  <script src="cloud.js"></script>
+  <script src="data-api.js"></script>
+  <script>
+    (function () {
+      function $(id) {
+        return document.getElementById(id);
+      }
+
+      function setAuthTab(signin) {
+        $("tab-signin").classList.toggle("active", signin);
+        $("tab-register").classList.toggle("active", !signin);
+        $("tab-signin").setAttribute("aria-selected", signin ? "true" : "false");
+        $("tab-register").setAttribute("aria-selected", !signin ? "true" : "false");
+        $("panel-login").classList.toggle("active", signin);
+        $("panel-register").classList.toggle("active", !signin);
+        $("login-error").textContent = "";
+        $("register-error").textContent = "";
+      }
+
+      function showView(name) {
+        $("view-login").classList.toggle("active", name === "login");
+        $("view-landing").classList.toggle("active", name === "landing");
+      }
+
+      function firstNameFromEmail(email) {
+        var local = (email || "").split("@")[0] || "there";
+        var part = local.split(/[._-]/)[0];
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      }
+
+      function renderLanding(user) {
+        var email = user.email;
+        OJTApp.getHoursData(user).then(function (data) {
+          $("landing-greeting").textContent =
+            "Welcome, " + firstNameFromEmail(email);
+          $("landing-email").textContent = email;
+          var sub = $("landing-sub");
+          if (sub) {
+            sub.textContent = OJTApp.isCloud()
+              ? "Your OJT hour summary — synced online; open this site on any device with the same login."
+              : "Your OJT hour summary — log time in, breaks, and overtime on the time page.";
+          }
+          $("stat-total").textContent = String(data.total != null ? data.total : 0);
+          $("stat-week").textContent = String(data.week != null ? data.week : 0);
+          $("stat-overtime").textContent = String(
+            data.overtimeTotal != null ? data.overtimeTotal : 0
+          );
+          var goalInput = $("input-goal");
+          if (goalInput) {
+            goalInput.value =
+              data.goal != null && data.goal !== "" ? String(data.goal) : "";
+          }
+
+          var total = data.total != null ? data.total : 0;
+          var goal = data.goal;
+          var remEl = $("stat-remaining");
+          if (remEl) {
+            if (goal == null || goal === "" || isNaN(Number(goal))) {
+              remEl.textContent = "—";
+            } else {
+              var g = Number(goal);
+              var remaining = Math.round((g - total) * 1000) / 1000;
+              remEl.textContent = String(remaining > 0 ? remaining : 0);
+            }
+          }
+        });
+      }
+
+      function saveGoalFromInput() {
+        var el = $("input-goal");
+        if (!el) return;
+        var user = OJTApp.getUser();
+        if (!user || !user.email) return;
+        OJTApp.setGoal(el.value, user).then(function () {
+          renderLanding(user);
+        });
+      }
+
+      function init() {
+        var hint = $("setup-hint");
+        if (hint) {
+          if (OJTApp.isCloud()) {
+            hint.innerHTML =
+              "<strong>Online account</strong> — your hours are stored in the cloud. Sign in anywhere with the same email.";
+          } else {
+            hint.innerHTML =
+              "For the same account on every device after you go live, add Firebase: <code>firebase-config.example.js</code> + <code>DEPLOY.md</code>.";
+          }
+        }
+
+        var modeBanner = $("sync-mode-banner");
+        if (modeBanner) {
+          modeBanner.hidden = false;
+          if (OJTApp.isCloud()) {
+            modeBanner.className = "sync-banner ok";
+            modeBanner.textContent =
+              "Cloud sync is on — sign in on any device with the same email and password.";
+          } else {
+            modeBanner.className = "sync-banner warn";
+            modeBanner.textContent =
+              "This site is in device-only mode: accounts exist only in each browser. To use the same login on your phone or another PC, add your Firebase config to firebase-config.js, add your Vercel URL in Firebase → Authorized domains, and redeploy.";
+          }
+        }
+
+        OJTApp.init()
+          .then(function () {
+            return OJTApp.waitForAuth();
+          })
+          .then(function () {
+            var user = OJTApp.getUser();
+            if (user && user.email) {
+              return OJTApp.syncHours(user).then(function () {
+                renderLanding(OJTApp.getUser());
+                showView("landing");
+              });
+            }
+            showView("login");
+          })
+          .catch(function () {
+            showView("login");
+          });
+
+        $("tab-signin").addEventListener("click", function () {
+          setAuthTab(true);
+        });
+        $("tab-register").addEventListener("click", function () {
+          setAuthTab(false);
+        });
+
+        $("form-login").addEventListener("submit", function (e) {
+          e.preventDefault();
+          var email = $("email").value.trim();
+          var password = $("password").value;
+          var err = $("login-error");
+          err.textContent = "";
+
+          OJTApp.login(email, password, $("remember").checked)
+            .then(function (res) {
+              if (!res.ok) {
+                err.textContent = res.error || "Sign in failed.";
+                return;
+              }
+              renderLanding(OJTApp.getUser());
+              showView("landing");
+            })
+            .catch(function () {
+              err.textContent =
+                "Could not sign in. Try https or a current browser.";
+            });
+        });
+
+        $("form-register").addEventListener("submit", function (e) {
+          e.preventDefault();
+          var email = $("reg-email").value.trim();
+          var pass = $("reg-password").value;
+          var pass2 = $("reg-password2").value;
+          var err = $("register-error");
+          err.textContent = "";
+
+          OJTApp.register(email, pass, pass2, $("remember").checked)
+            .then(function (res) {
+              if (!res.ok) {
+                err.textContent = res.error || "Could not create account.";
+                return;
+              }
+              renderLanding(OJTApp.getUser());
+              showView("landing");
+            })
+            .catch(function () {
+              err.textContent =
+                "Could not create account. Try https or a current browser.";
+            });
+        });
+
+        function performLogout() {
+          OJTApp.logout().then(function () {
+            $("email").value = "";
+            $("password").value = "";
+            $("reg-email").value = "";
+            $("reg-password").value = "";
+            $("reg-password2").value = "";
+            $("login-error").textContent = "";
+            $("register-error").textContent = "";
+            setAuthTab(true);
+            showView("login");
+          });
+        }
+
+        $("btn-logout").addEventListener("click", performLogout);
+        $("btn-logout-footer").addEventListener("click", performLogout);
+
+        var goalEl = $("input-goal");
+        if (goalEl) {
+          goalEl.addEventListener("blur", saveGoalFromInput);
+          goalEl.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              goalEl.blur();
+            }
+          });
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

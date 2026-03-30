@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log time — OJT Hours Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a222c;
+      --surface-hover: #232d3a;
+      --border: #2d3a4a;
+      --text: #e8edf4;
+      --muted: #8b9aaf;
+      --accent: #3db88a;
+      --accent-dim: #2a8f6a;
+      --warning: #e8b84a;
+      --danger: #e85d5d;
+      --radius: 12px;
+      --shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Instrument Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(61, 184, 138, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61, 184, 138, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0.35rem 0;
+    }
+
+    .back:hover {
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      margin: 0.35rem 0 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 520px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="date"],
+    input[type="time"],
+    input[type="number"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font: inherit;
+      font-size: 0.9375rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 0;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(61, 184, 138, 0.2);
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field-group-title {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 1.25rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field-group-title:first-of-type {
+      margin-top: 0;
+    }
+
+    .summary {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin: 1.25rem 0;
+      font-size: 0.875rem;
+    }
+
+    .summary dl {
+      margin: 0;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .summary dt {
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin: 0;
+    }
+
+    .summary dd {
+      margin: 0 0 0.5rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary dd:last-child {
+      margin-bottom: 0;
+    }
+
+    .summary .highlight {
+      color: var(--accent);
+      font-size: 1.1rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0f12;
+    }
+
+    .btn-primary:hover {
+      background: #4bc896;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      width: auto;
+      padding: 0.5rem 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .top-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .error {
+      font-size: 0.8125rem;
+      color: var(--danger);
+      margin: 0 0 1rem;
+      min-height: 1.25rem;
+    }
+
+    .toast {
+      font-size: 0.8125rem;
+      color: var(--accent);
+      margin: 0 0 1rem;
+      min-height: 1.25rem;
+    }
+
+    .hint {
+      margin-top: 1rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+
+    .user-pill {
+      font-size: 0.75rem;
+      color: var(--muted);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="bg-pattern" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="panel">
+        <div class="top-nav">
+          <a class="back" href="index.html">← Dashboard</a>
+          <div class="top-nav-right">
+            <span class="user-pill" id="user-pill" title=""></span>
+            <button type="button" class="btn btn-ghost" id="btn-logout">Log out</button>
+          </div>
+        </div>
+        <h1>Log time in / out</h1>
+        <p class="sub">Enter your shift, breaks, and any overtime for this OJT day.</p>
+
+        <form id="form-time" novalidate>
+          <div class="field-group-title">Shift</div>
+          <div class="field">
+            <label for="work-date">Date</label>
+            <input id="work-date" name="workDate" type="date" required />
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="time-in">Time in</label>
+              <input id="time-in" name="timeIn" type="time" required />
+            </div>
+            <div class="field">
+              <label for="time-out">Time out</label>
+              <input id="time-out" name="timeOut" type="time" required />
+            </div>
+          </div>
+
+          <div class="field-group-title">Break &amp; overtime</div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="break-minutes">Break (minutes)</label>
+              <input id="break-minutes" name="breakMinutes" type="number" min="0" step="1" value="0" />
+            </div>
+            <div class="field">
+              <label for="overtime-hours">Overtime (hours)</label>
+              <input id="overtime-hours" name="overtimeHours" type="number" min="0" step="0.25" value="0" />
+            </div>
+          </div>
+          <p class="hint">Break is subtracted from your shift length. Add overtime if you worked extra beyond this block (counts toward your OJT total).</p>
+
+          <div class="summary" aria-live="polite">
+            <dl>
+              <dt>Gross shift</dt>
+              <dd id="sum-gross">—</dd>
+              <dt>After break (net)</dt>
+              <dd id="sum-net">—</dd>
+              <dt>Overtime added</dt>
+              <dd id="sum-ot">—</dd>
+              <dt>Total for this entry</dt>
+              <dd class="highlight" id="sum-total">—</dd>
+            </dl>
+          </div>
+
+          <p id="form-error" class="error" role="alert"></p>
+          <p id="form-toast" class="toast" role="status"></p>
+          <button type="submit" class="btn btn-primary" id="btn-save">Save entry</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
+  <script src="db.js"></script>
+  <script src="cloud.js"></script>
+  <script src="data-api.js"></script>
+  <script>
+    (function () {
+      function $(id) {
+        return document.getElementById(id);
+      }
+
+      function parseGrossHours(dateStr, tIn, tOut) {
+        var start = new Date(dateStr + "T" + tIn + ":00");
+        var end = new Date(dateStr + "T" + tOut + ":00");
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return NaN;
+        if (end <= start) {
+          end.setDate(end.getDate() + 1);
+        }
+        return (end - start) / 3600000;
+      }
+
+      function readBreakOt() {
+        var br = parseFloat($("break-minutes").value, 10);
+        var ot = parseFloat($("overtime-hours").value, 10);
+        if (isNaN(br) || br < 0) br = 0;
+        if (isNaN(ot) || ot < 0) ot = 0;
+        return { breakMinutes: br, overtimeHours: ot };
+      }
+
+      function updateSummary() {
+        var dateStr = $("work-date").value;
+        var tIn = $("time-in").value;
+        var tOut = $("time-out").value;
+        var bo = readBreakOt();
+        $("form-error").textContent = "";
+
+        if (!dateStr || !tIn || !tOut) {
+          $("sum-gross").textContent = "—";
+          $("sum-net").textContent = "—";
+          $("sum-ot").textContent = "—";
+          $("sum-total").textContent = "—";
+          return;
+        }
+
+        var gross = parseGrossHours(dateStr, tIn, tOut);
+        if (isNaN(gross) || gross <= 0) {
+          $("sum-gross").textContent = "—";
+          $("sum-net").textContent = "—";
+          $("sum-ot").textContent = formatH(bo.overtimeHours);
+          $("sum-total").textContent = "—";
+          return;
+        }
+
+        var breakH = bo.breakMinutes / 60;
+        var net = Math.max(0, gross - breakH);
+        var total = net + bo.overtimeHours;
+
+        $("sum-gross").textContent = formatH(gross);
+        $("sum-net").textContent = formatH(net);
+        $("sum-ot").textContent = formatH(bo.overtimeHours);
+        $("sum-total").textContent = formatH(total);
+      }
+
+      function formatH(n) {
+        var r = Math.round(n * 1000) / 1000;
+        return r.toFixed(r % 1 === 0 ? 0 : 2) + " hrs";
+      }
+
+      function todayISODate() {
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, "0");
+        var day = String(d.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + day;
+      }
+
+      function logout() {
+        OJTApp.logout().then(function () {
+          window.location.href = "index.html";
+        });
+      }
+
+      function init() {
+        var user = OJTApp.getUser();
+        if (!user || !user.email) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        $("user-pill").textContent = user.email;
+        $("user-pill").title = user.email;
+
+        $("btn-logout").addEventListener("click", logout);
+
+        $("work-date").value = todayISODate();
+        $("time-in").value = "09:00";
+        $("time-out").value = "17:00";
+
+        ["work-date", "time-in", "time-out", "break-minutes", "overtime-hours"].forEach(function (id) {
+          $(id).addEventListener("input", updateSummary);
+          $(id).addEventListener("change", updateSummary);
+        });
+        updateSummary();
+
+        $("form-time").addEventListener("submit", function (e) {
+          e.preventDefault();
+          var user = OJTApp.getUser();
+          if (!user || !user.email) {
+            window.location.href = "index.html";
+            return;
+          }
+
+          var err = $("form-error");
+          var toast = $("form-toast");
+          var btn = $("btn-save");
+          err.textContent = "";
+          toast.textContent = "";
+
+          var dateStr = $("work-date").value;
+          var tIn = $("time-in").value;
+          var tOut = $("time-out").value;
+          var bo = readBreakOt();
+
+          if (!dateStr || !tIn || !tOut) {
+            err.textContent = "Please fill in date, time in, and time out.";
+            return;
+          }
+
+          var gross = parseGrossHours(dateStr, tIn, tOut);
+          if (isNaN(gross) || gross <= 0) {
+            err.textContent = "Time out must be after time in (same day, or past midnight for night shifts).";
+            return;
+          }
+
+          var breakH = bo.breakMinutes / 60;
+          if (breakH > gross + 1e-6) {
+            err.textContent = "Break cannot be longer than the gross shift.";
+            return;
+          }
+
+          var net = Math.max(0, gross - breakH);
+          var total = net + bo.overtimeHours;
+
+          var entry = {
+            id: Date.now(),
+            date: dateStr,
+            timeIn: tIn,
+            timeOut: tOut,
+            breakMinutes: bo.breakMinutes,
+            overtimeHours: bo.overtimeHours,
+            grossHours: Math.round(gross * 1000) / 1000,
+            netHours: Math.round(net * 1000) / 1000,
+            totalHours: Math.round(total * 1000) / 1000,
+            createdAt: Date.now()
+          };
+
+          btn.disabled = true;
+          OJTApp.init()
+            .then(function () {
+              return OJTApp.addEntry(entry, user);
+            })
+            .then(function () {
+              toast.textContent = "Saved — returning home…";
+              window.location.href = "index.html";
+            })
+            .catch(function () {
+              err.textContent = "Could not save. Check that this page is opened from the same folder (db.js required).";
+              btn.disabled = false;
+            });
+        });
+      }
+
+      function boot() {
+        OJTApp.init()
+          .then(function () {
+            return OJTApp.waitForAuth();
+          })
+          .then(function () {
+            init();
+          })
+          .catch(function () {
+            $("form-error").textContent =
+              "Could not load. Use a modern browser, serve this folder over http(s), or check Firebase config.";
+          });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
+</body>
+</html>
