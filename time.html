@@ -310,7 +310,6 @@
           <a class="back" href="index.html">← Dashboard</a>
           <div class="top-nav-right">
             <span class="user-pill" id="user-pill" title=""></span>
-            <button type="button" class="btn btn-ghost" id="btn-logout">Log out</button>
           </div>
         </div>
         <h1>Log time in / out</h1>
@@ -501,8 +500,6 @@
 
         $("user-pill").textContent = user.email;
         $("user-pill").title = user.email;
-
-        $("btn-logout").addEventListener("click", logout);
 
         var dashBack = document.querySelector('a.back[href="index.html"]');
         if (dashBack) {
