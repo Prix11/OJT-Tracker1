@@ -497,6 +497,15 @@
 
         $("btn-logout").addEventListener("click", logout);
 
+        var dashBack = document.querySelector('a.back[href="index.html"]');
+        if (dashBack) {
+          dashBack.addEventListener("click", function () {
+            try {
+              sessionStorage.setItem("ojt_return_home", "1");
+            } catch (e) {}
+          });
+        }
+
         $("work-date").value = todayISODate();
         $("time-in").value = "09:00";
         $("time-out").value = "17:00";
@@ -584,7 +593,10 @@
             })
             .then(function () {
               toast.textContent = "Saved — returning home…";
-              window.location.href = "index.html";
+              try {
+                sessionStorage.setItem("ojt_return_home", "1");
+              } catch (e) {}
+              window.location.replace("index.html");
             })
             .catch(function (e) {
               var msg = e && e.message;

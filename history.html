@@ -721,6 +721,15 @@
       function init() {
         $("btn-logout").addEventListener("click", logout);
 
+        var dashBack = document.querySelector('a.back[href="index.html"]');
+        if (dashBack) {
+          dashBack.addEventListener("click", function () {
+            try {
+              sessionStorage.setItem("ojt_return_home", "1");
+            } catch (e) {}
+          });
+        }
+
         $("btn-cancel-edit").addEventListener("click", closeEditModal);
         $("edit-modal").addEventListener("click", function (ev) {
           if (ev.target === $("edit-modal")) closeEditModal();

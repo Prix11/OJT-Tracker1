@@ -283,6 +283,41 @@
       display: block;
     }
 
+    .loading-panel {
+      text-align: center;
+      padding: 2rem 1.5rem;
+    }
+
+    .loading-text {
+      margin: 0 0 1rem;
+      font-size: 0.9375rem;
+      color: var(--muted);
+    }
+
+    .loading-spinner {
+      width: 36px;
+      height: 36px;
+      margin: 0 auto;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: ojt-spin 0.75s linear infinite;
+    }
+
+    @keyframes ojt-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loading-spinner {
+        animation: none;
+        border-top-color: var(--border);
+        opacity: 0.6;
+      }
+    }
+
     /* Landing */
     header.landing-head {
       display: flex;
@@ -426,8 +461,16 @@
   <div class="app">
     <div class="bg-pattern" aria-hidden="true"></div>
     <div class="wrap">
+      <!-- Shown until Firebase / session knows if you are signed in (avoids login flash) -->
+      <section id="view-loading" class="view active" aria-busy="true" aria-live="polite">
+        <div class="panel loading-panel">
+          <p class="loading-text" id="loading-text">Loading…</p>
+          <div class="loading-spinner" aria-hidden="true"></div>
+        </div>
+      </section>
+
       <!-- Login -->
-      <section id="view-login" class="view active" aria-labelledby="login-title">
+      <section id="view-login" class="view" aria-labelledby="login-title">
         <div class="panel">
           <div class="brand">
             <div class="brand-mark" aria-hidden="true">OJT</div>
@@ -564,8 +607,11 @@
       }
 
       function showView(name) {
+        $("view-loading").classList.toggle("active", name === "loading");
         $("view-login").classList.toggle("active", name === "login");
         $("view-landing").classList.toggle("active", name === "landing");
+        var loadEl = $("view-loading");
+        if (loadEl) loadEl.setAttribute("aria-busy", name === "loading" ? "true" : "false");
       }
 
       function firstNameFromEmail(email) {
@@ -662,6 +708,22 @@
           }
         }
 
+        var loadingMsg = $("loading-text");
+        if (loadingMsg) {
+          var fromApp = false;
+          try {
+            fromApp = sessionStorage.getItem("ojt_return_home") === "1";
+            if (fromApp) sessionStorage.removeItem("ojt_return_home");
+          } catch (e) {}
+          if (fromApp) {
+            loadingMsg.textContent = "Opening your dashboard…";
+          } else if (OJTApp.isCloud()) {
+            loadingMsg.textContent = "Signing you in…";
+          } else {
+            loadingMsg.textContent = "Loading…";
+          }
+        }
+
         OJTApp.init()
           .then(function () {
             return OJTApp.waitForAuth();
@@ -669,9 +731,12 @@
           .then(function () {
             var user = OJTApp.getUser();
             if (user && user.email) {
+              showView("landing");
+              $("landing-greeting").textContent =
+                "Welcome, " + firstNameFromEmail(user.email);
+              $("landing-email").textContent = user.email;
               return OJTApp.syncHours(user).then(function () {
                 renderLanding(OJTApp.getUser());
-                showView("landing");
               });
             }
             showView("login");
