@@ -414,14 +414,19 @@
             <input id="edit-time-out" name="timeOut" type="time" required />
           </div>
         </div>
+        <div class="field">
+          <label for="edit-break">Break (minutes)</label>
+          <input id="edit-break" name="breakMinutes" type="number" min="0" step="1" value="0" />
+        </div>
+        <p style="margin:0 0 0.5rem;font-size:0.8125rem;color:var(--muted);">Overtime (optional)</p>
         <div class="grid-2">
           <div class="field">
-            <label for="edit-break">Break (minutes)</label>
-            <input id="edit-break" name="breakMinutes" type="number" min="0" step="1" value="0" />
+            <label for="edit-ot-in">Overtime start</label>
+            <input id="edit-ot-in" name="overtimeStart" type="time" />
           </div>
           <div class="field">
-            <label for="edit-ot">Overtime (hours)</label>
-            <input id="edit-ot" name="overtimeHours" type="number" min="0" step="0.25" value="0" />
+            <label for="edit-ot-out">Overtime end</label>
+            <input id="edit-ot-out" name="overtimeEnd" type="time" />
           </div>
         </div>
         <p id="edit-error" class="modal-error" role="alert"></p>
@@ -498,21 +503,47 @@
         return (end - start) / 3600000;
       }
 
-      function readEditFormValues() {
+      function readEditBreak() {
         var br = parseFloat($("edit-break").value, 10);
-        var ot = parseFloat($("edit-ot").value, 10);
         if (isNaN(br) || br < 0) br = 0;
-        if (isNaN(ot) || ot < 0) ot = 0;
-        return { breakMinutes: br, overtimeHours: ot };
+        return br;
+      }
+
+      function readEditOvertimeTimes() {
+        var oIn = ($("edit-ot-in").value || "").trim();
+        var oOut = ($("edit-ot-out").value || "").trim();
+        return { overtimeStart: oIn, overtimeEnd: oOut };
+      }
+
+      function computeOvertimeHours(dateStr, otStart, otEnd) {
+        if (!otStart || !otEnd) return 0;
+        var h = parseGrossHours(dateStr, otStart, otEnd);
+        return isNaN(h) || h <= 0 ? 0 : h;
+      }
+
+      function getOvertimeHoursForDisplay(entry) {
+        if (entry.overtimeStart && entry.overtimeEnd) {
+          var h = parseGrossHours(
+            entry.date,
+            String(entry.overtimeStart).slice(0, 5),
+            String(entry.overtimeEnd).slice(0, 5)
+          );
+          if (!isNaN(h) && h > 0) return h;
+        }
+        return entry.overtimeHours != null ? entry.overtimeHours : 0;
       }
 
       function buildEntryFromEditForm(existingEntry) {
         var dateStr = $("edit-date").value;
         var tIn = $("edit-time-in").value;
         var tOut = $("edit-time-out").value;
-        var bo = readEditFormValues();
+        var br = readEditBreak();
+        var ot = readEditOvertimeTimes();
         if (!dateStr || !tIn || !tOut) {
           return { error: "Please fill in date, time in, and time out." };
+        }
+        if ((ot.overtimeStart && !ot.overtimeEnd) || (!ot.overtimeStart && ot.overtimeEnd)) {
+          return { error: "Enter both overtime start and end, or leave both empty." };
         }
         var gross = parseGrossHours(dateStr, tIn, tOut);
         if (isNaN(gross) || gross <= 0) {
@@ -520,20 +551,42 @@
             error: "Time out must be after time in (same day, or past midnight for night shifts)."
           };
         }
-        var breakH = bo.breakMinutes / 60;
+        var breakH = br / 60;
         if (breakH > gross + 1e-6) {
           return { error: "Break cannot be longer than the gross shift." };
         }
+        var otH = 0;
+        var otStartOut = "";
+        var otEndOut = "";
+        if (ot.overtimeStart && ot.overtimeEnd) {
+          otH = computeOvertimeHours(dateStr, ot.overtimeStart, ot.overtimeEnd);
+          if (otH <= 0) {
+            return {
+              error:
+                "Overtime end must be after overtime start (same day, or past midnight for night overtime)."
+            };
+          }
+          otStartOut = ot.overtimeStart;
+          otEndOut = ot.overtimeEnd;
+        } else {
+          if (existingEntry.overtimeStart || existingEntry.overtimeEnd) {
+            otH = 0;
+          } else {
+            otH = existingEntry.overtimeHours != null ? existingEntry.overtimeHours : 0;
+          }
+        }
         var net = Math.max(0, gross - breakH);
-        var total = net + bo.overtimeHours;
+        var total = net + otH;
         return {
           entry: {
             id: existingEntry.id,
             date: dateStr,
             timeIn: tIn,
             timeOut: tOut,
-            breakMinutes: bo.breakMinutes,
-            overtimeHours: bo.overtimeHours,
+            breakMinutes: br,
+            overtimeStart: otStartOut,
+            overtimeEnd: otEndOut,
+            overtimeHours: Math.round(otH * 1000) / 1000,
             grossHours: Math.round(gross * 1000) / 1000,
             netHours: Math.round(net * 1000) / 1000,
             totalHours: Math.round(total * 1000) / 1000,
@@ -549,7 +602,13 @@
         $("edit-time-in").value = entry.timeIn ? entry.timeIn.slice(0, 5) : "";
         $("edit-time-out").value = entry.timeOut ? entry.timeOut.slice(0, 5) : "";
         $("edit-break").value = String(entry.breakMinutes != null ? entry.breakMinutes : 0);
-        $("edit-ot").value = String(entry.overtimeHours != null ? entry.overtimeHours : 0);
+        if (entry.overtimeStart && entry.overtimeEnd) {
+          $("edit-ot-in").value = String(entry.overtimeStart).slice(0, 5);
+          $("edit-ot-out").value = String(entry.overtimeEnd).slice(0, 5);
+        } else {
+          $("edit-ot-in").value = "";
+          $("edit-ot-out").value = "";
+        }
         $("edit-error").textContent = "";
         $("edit-modal").hidden = false;
         $("edit-date").focus();
@@ -597,7 +656,7 @@
             escapeHtml(String(e.breakMinutes != null ? e.breakMinutes : 0)) +
             "</td>" +
             '<td class="num">' +
-            escapeHtml(formatNum(e.overtimeHours, 2)) +
+            escapeHtml(formatNum(getOvertimeHoursForDisplay(e), 2)) +
             "</td>" +
             '<td class="num">' +
             escapeHtml(formatNum(e.netHours, 2)) +

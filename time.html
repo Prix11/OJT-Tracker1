@@ -333,18 +333,23 @@
             </div>
           </div>
 
-          <div class="field-group-title">Break &amp; overtime</div>
+          <div class="field-group-title">Break</div>
+          <div class="field">
+            <label for="break-minutes">Break (minutes)</label>
+            <input id="break-minutes" name="breakMinutes" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field-group-title">Overtime (optional)</div>
           <div class="grid-2">
             <div class="field">
-              <label for="break-minutes">Break (minutes)</label>
-              <input id="break-minutes" name="breakMinutes" type="number" min="0" step="1" value="0" />
+              <label for="overtime-in">Overtime start</label>
+              <input id="overtime-in" name="overtimeStart" type="time" />
             </div>
             <div class="field">
-              <label for="overtime-hours">Overtime (hours)</label>
-              <input id="overtime-hours" name="overtimeHours" type="number" min="0" step="0.25" value="0" />
+              <label for="overtime-out">Overtime end</label>
+              <input id="overtime-out" name="overtimeEnd" type="time" />
             </div>
           </div>
-          <p class="hint">Break is subtracted from your shift length. Add overtime if you worked extra beyond this block (counts toward your OJT total).</p>
+          <p class="hint">Break is subtracted from your shift length. Log overtime as a second time block on the same date (end after start, or past midnight like your main shift). Leave both overtime fields empty if none.</p>
 
           <div class="summary" aria-live="polite">
             <dl>
@@ -391,25 +396,48 @@
         return (end - start) / 3600000;
       }
 
-      function readBreakOt() {
+      function readBreakMinutes() {
         var br = parseFloat($("break-minutes").value, 10);
-        var ot = parseFloat($("overtime-hours").value, 10);
         if (isNaN(br) || br < 0) br = 0;
-        if (isNaN(ot) || ot < 0) ot = 0;
-        return { breakMinutes: br, overtimeHours: ot };
+        return br;
+      }
+
+      function readOvertimeTimes() {
+        var oIn = ($("overtime-in").value || "").trim();
+        var oOut = ($("overtime-out").value || "").trim();
+        return { overtimeStart: oIn, overtimeEnd: oOut };
+      }
+
+      function computeOvertimeHours(dateStr, otStart, otEnd) {
+        if (!otStart || !otEnd) return 0;
+        var h = parseGrossHours(dateStr, otStart, otEnd);
+        return isNaN(h) || h <= 0 ? 0 : h;
       }
 
       function updateSummary() {
         var dateStr = $("work-date").value;
         var tIn = $("time-in").value;
         var tOut = $("time-out").value;
-        var bo = readBreakOt();
+        var br = readBreakMinutes();
+        var ot = readOvertimeTimes();
         $("form-error").textContent = "";
+
+        var otH = 0;
+        if (ot.overtimeStart || ot.overtimeEnd) {
+          if (!ot.overtimeStart || !ot.overtimeEnd) {
+            $("sum-gross").textContent = "—";
+            $("sum-net").textContent = "—";
+            $("sum-ot").textContent = "—";
+            $("sum-total").textContent = "—";
+            return;
+          }
+          otH = computeOvertimeHours(dateStr, ot.overtimeStart, ot.overtimeEnd);
+        }
 
         if (!dateStr || !tIn || !tOut) {
           $("sum-gross").textContent = "—";
           $("sum-net").textContent = "—";
-          $("sum-ot").textContent = "—";
+          $("sum-ot").textContent = otH > 0 ? formatH(otH) : "—";
           $("sum-total").textContent = "—";
           return;
         }
@@ -418,18 +446,18 @@
         if (isNaN(gross) || gross <= 0) {
           $("sum-gross").textContent = "—";
           $("sum-net").textContent = "—";
-          $("sum-ot").textContent = formatH(bo.overtimeHours);
+          $("sum-ot").textContent = formatH(otH);
           $("sum-total").textContent = "—";
           return;
         }
 
-        var breakH = bo.breakMinutes / 60;
+        var breakH = br / 60;
         var net = Math.max(0, gross - breakH);
-        var total = net + bo.overtimeHours;
+        var total = net + otH;
 
         $("sum-gross").textContent = formatH(gross);
         $("sum-net").textContent = formatH(net);
-        $("sum-ot").textContent = formatH(bo.overtimeHours);
+        $("sum-ot").textContent = formatH(otH);
         $("sum-total").textContent = formatH(total);
       }
 
@@ -468,7 +496,7 @@
         $("time-in").value = "09:00";
         $("time-out").value = "17:00";
 
-        ["work-date", "time-in", "time-out", "break-minutes", "overtime-hours"].forEach(function (id) {
+        ["work-date", "time-in", "time-out", "break-minutes", "overtime-in", "overtime-out"].forEach(function (id) {
           $(id).addEventListener("input", updateSummary);
           $(id).addEventListener("change", updateSummary);
         });
@@ -491,10 +519,16 @@
           var dateStr = $("work-date").value;
           var tIn = $("time-in").value;
           var tOut = $("time-out").value;
-          var bo = readBreakOt();
+          var br = readBreakMinutes();
+          var ot = readOvertimeTimes();
 
           if (!dateStr || !tIn || !tOut) {
             err.textContent = "Please fill in date, time in, and time out.";
+            return;
+          }
+
+          if ((ot.overtimeStart && !ot.overtimeEnd) || (!ot.overtimeStart && ot.overtimeEnd)) {
+            err.textContent = "Enter both overtime start and end, or leave both empty.";
             return;
           }
 
@@ -504,22 +538,34 @@
             return;
           }
 
-          var breakH = bo.breakMinutes / 60;
+          var breakH = br / 60;
           if (breakH > gross + 1e-6) {
             err.textContent = "Break cannot be longer than the gross shift.";
             return;
           }
 
+          var otH = 0;
+          if (ot.overtimeStart && ot.overtimeEnd) {
+            otH = computeOvertimeHours(dateStr, ot.overtimeStart, ot.overtimeEnd);
+            if (otH <= 0) {
+              err.textContent =
+                "Overtime end must be after overtime start (same day, or past midnight for night overtime).";
+              return;
+            }
+          }
+
           var net = Math.max(0, gross - breakH);
-          var total = net + bo.overtimeHours;
+          var total = net + otH;
 
           var entry = {
             id: Date.now(),
             date: dateStr,
             timeIn: tIn,
             timeOut: tOut,
-            breakMinutes: bo.breakMinutes,
-            overtimeHours: bo.overtimeHours,
+            breakMinutes: br,
+            overtimeStart: ot.overtimeStart || "",
+            overtimeEnd: ot.overtimeEnd || "",
+            overtimeHours: Math.round(otH * 1000) / 1000,
             grossHours: Math.round(gross * 1000) / 1000,
             netHours: Math.round(net * 1000) / 1000,
             totalHours: Math.round(total * 1000) / 1000,
