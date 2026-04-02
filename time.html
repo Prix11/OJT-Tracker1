@@ -437,7 +437,7 @@
         if (!dateStr || !tIn || !tOut) {
           $("sum-gross").textContent = "—";
           $("sum-net").textContent = "—";
-          $("sum-ot").textContent = otH > 0 ? formatH(otH) : "—";
+          $("sum-ot").textContent = otH > 0 ? formatHoursMinutes(otH) : "—";
           $("sum-total").textContent = "—";
           return;
         }
@@ -446,7 +446,7 @@
         if (isNaN(gross) || gross <= 0) {
           $("sum-gross").textContent = "—";
           $("sum-net").textContent = "—";
-          $("sum-ot").textContent = formatH(otH);
+          $("sum-ot").textContent = formatHoursMinutes(otH);
           $("sum-total").textContent = "—";
           return;
         }
@@ -455,15 +455,20 @@
         var net = Math.max(0, gross - breakH);
         var total = net + otH;
 
-        $("sum-gross").textContent = formatH(gross);
-        $("sum-net").textContent = formatH(net);
-        $("sum-ot").textContent = formatH(otH);
-        $("sum-total").textContent = formatH(total);
+        $("sum-gross").textContent = formatHoursMinutes(gross);
+        $("sum-net").textContent = formatHoursMinutes(net);
+        $("sum-ot").textContent = formatHoursMinutes(otH);
+        $("sum-total").textContent = formatHoursMinutes(total);
       }
 
-      function formatH(n) {
-        var r = Math.round(n * 1000) / 1000;
-        return r.toFixed(r % 1 === 0 ? 0 : 2) + " hrs";
+      function formatHoursMinutes(h) {
+        if (h == null || isNaN(h)) return "—";
+        var neg = h < 0;
+        h = Math.abs(Number(h));
+        var totalMins = Math.round(h * 60);
+        var hrs = Math.floor(totalMins / 60);
+        var mins = totalMins % 60;
+        return (neg ? "-" : "") + hrs + "h " + mins + "m";
       }
 
       function todayISODate() {

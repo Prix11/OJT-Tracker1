@@ -495,16 +495,16 @@
           </header>
           <div class="stats">
             <div class="stat">
-              <div class="stat-value" id="stat-week">0</div>
-              <div class="stat-label">This week (hrs)</div>
+              <div class="stat-value" id="stat-week">0h 0m</div>
+              <div class="stat-label">This week</div>
             </div>
             <div class="stat">
-              <div class="stat-value" id="stat-total">0</div>
-              <div class="stat-label">Total OJT (hrs)</div>
+              <div class="stat-value" id="stat-total">0h 0m</div>
+              <div class="stat-label">Total OJT</div>
             </div>
             <div class="stat">
-              <div class="stat-value" id="stat-overtime">0</div>
-              <div class="stat-label">Overtime (hrs)</div>
+              <div class="stat-value" id="stat-overtime">0h 0m</div>
+              <div class="stat-label">Overtime</div>
             </div>
             <div class="stat">
               <input
@@ -518,11 +518,11 @@
                 autocomplete="off"
                 aria-label="Target OJT hours"
               />
-              <div class="stat-label">Target (hrs)</div>
+              <div class="stat-label">Target (hours)</div>
             </div>
             <div class="stat">
               <div class="stat-value" id="stat-remaining">—</div>
-              <div class="stat-label">Remaining (hrs)</div>
+              <div class="stat-label">Remaining</div>
             </div>
           </div>
           <div class="actions">
@@ -574,6 +574,16 @@
         return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
       }
 
+      function formatHoursMinutes(h) {
+        if (h == null || isNaN(h)) return "—";
+        var neg = h < 0;
+        h = Math.abs(Number(h));
+        var totalMins = Math.round(h * 60);
+        var hrs = Math.floor(totalMins / 60);
+        var mins = totalMins % 60;
+        return (neg ? "-" : "") + hrs + "h " + mins + "m";
+      }
+
       function renderLanding(user) {
         var email = user.email;
         OJTApp.getHoursData(user).then(function (data) {
@@ -586,9 +596,13 @@
               ? "Your OJT hour summary — synced online; open this site on any device with the same login."
               : "Your OJT hour summary — log time in, breaks, and overtime on the time page.";
           }
-          $("stat-total").textContent = String(data.total != null ? data.total : 0);
-          $("stat-week").textContent = String(data.week != null ? data.week : 0);
-          $("stat-overtime").textContent = String(
+          $("stat-total").textContent = formatHoursMinutes(
+            data.total != null ? data.total : 0
+          );
+          $("stat-week").textContent = formatHoursMinutes(
+            data.week != null ? data.week : 0
+          );
+          $("stat-overtime").textContent = formatHoursMinutes(
             data.overtimeTotal != null ? data.overtimeTotal : 0
           );
           var goalInput = $("input-goal");
@@ -606,7 +620,7 @@
             } else {
               var g = Number(goal);
               var remaining = Math.round((g - total) * 1000) / 1000;
-              remEl.textContent = String(remaining > 0 ? remaining : 0);
+              remEl.textContent = formatHoursMinutes(remaining > 0 ? remaining : 0);
             }
           }
         });

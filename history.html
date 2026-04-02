@@ -383,9 +383,9 @@
                 <th scope="col">Time in</th>
                 <th scope="col">Time out</th>
                 <th scope="col" class="num">Break (min)</th>
-                <th scope="col" class="num">OT (hrs)</th>
-                <th scope="col" class="num">Net (hrs)</th>
-                <th scope="col" class="num">Total (hrs)</th>
+                <th scope="col" class="num">OT</th>
+                <th scope="col" class="num">Net</th>
+                <th scope="col" class="num">Total</th>
                 <th scope="col">Actions</th>
               </tr>
             </thead>
@@ -478,10 +478,14 @@
         return iso;
       }
 
-      function formatNum(n, decimals) {
-        if (n == null || isNaN(n)) return "—";
-        var r = Math.round(n * Math.pow(10, decimals)) / Math.pow(10, decimals);
-        return String(r % 1 === 0 ? r : r.toFixed(decimals).replace(/\.?0+$/, ""));
+      function formatHoursMinutes(h) {
+        if (h == null || isNaN(h)) return "—";
+        var neg = h < 0;
+        h = Math.abs(Number(h));
+        var totalMins = Math.round(h * 60);
+        var hrs = Math.floor(totalMins / 60);
+        var mins = totalMins % 60;
+        return (neg ? "-" : "") + hrs + "h " + mins + "m";
       }
 
       function sortEntries(entries) {
@@ -656,13 +660,13 @@
             escapeHtml(String(e.breakMinutes != null ? e.breakMinutes : 0)) +
             "</td>" +
             '<td class="num">' +
-            escapeHtml(formatNum(getOvertimeHoursForDisplay(e), 2)) +
+            escapeHtml(formatHoursMinutes(getOvertimeHoursForDisplay(e))) +
             "</td>" +
             '<td class="num">' +
-            escapeHtml(formatNum(e.netHours, 2)) +
+            escapeHtml(formatHoursMinutes(e.netHours)) +
             "</td>" +
             '<td class="num total-cell">' +
-            escapeHtml(formatNum(e.totalHours, 2)) +
+            escapeHtml(formatHoursMinutes(e.totalHours)) +
             "</td>" +
             '<td class="actions">' +
             '<button type="button" class="btn-row" data-action="edit">Edit</button>' +
