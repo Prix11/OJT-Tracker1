@@ -630,6 +630,13 @@
         return (neg ? "-" : "") + hrs + "h " + mins + "m";
       }
 
+      function isValidEmail(email) {
+        if (!email) return false;
+        var s = String(email).trim();
+        // Simple, pragmatic email check for client-side validation.
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+      }
+
       function renderLanding(user) {
         var email = user.email;
         OJTApp.getHoursData(user).then(function (data) {
@@ -759,6 +766,11 @@
           var err = $("login-error");
           err.textContent = "";
 
+          if (!isValidEmail(email)) {
+            err.textContent = "Please enter a valid email address.";
+            return;
+          }
+
           OJTApp.login(email, password, $("remember").checked)
             .then(function (res) {
               if (!res.ok) {
@@ -781,6 +793,11 @@
           var pass2 = $("reg-password2").value;
           var err = $("register-error");
           err.textContent = "";
+
+          if (!isValidEmail(email)) {
+            err.textContent = "Please enter a valid email address.";
+            return;
+          }
 
           OJTApp.register(email, pass, pass2, $("remember").checked)
             .then(function (res) {
