@@ -1,0 +1,77 @@
+/* Light theme — paired with theme.js (data-theme on <html>) */
+html[data-theme="light"] {
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --surface-hover: #e4eaf2;
+  --border: #c5d0df;
+  --text: #14212e;
+  --muted: #5c6d80;
+  --accent: #0f8f5f;
+  --accent-dim: #0a6b47;
+  --danger: #c42b2b;
+  --warning: #b07d12;
+  --shadow: 0 20px 48px rgba(15, 35, 55, 0.1);
+  --on-accent: #ffffff;
+  --btn-primary-hover: #12a06e;
+  --focus-ring: rgba(15, 143, 95, 0.25);
+  --grid-line: rgba(15, 143, 95, 0.07);
+}
+
+html[data-theme="light"] .bg-pattern {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+}
+
+html[data-theme="light"] .sync-banner.warn {
+  background: rgba(184, 134, 11, 0.1);
+  border-color: rgba(184, 134, 11, 0.35);
+  color: #8a6a1e;
+}
+
+html[data-theme="light"] .sync-banner.ok {
+  background: rgba(15, 143, 95, 0.1);
+  border-color: rgba(15, 143, 95, 0.35);
+  color: #0a6b47;
+}
+
+html[data-theme="light"] tbody tr:hover {
+  background: rgba(15, 143, 95, 0.08);
+}
+
+html[data-theme="light"] .modal-actions .btn-secondary:hover {
+  background: var(--surface-hover);
+}
+
+.theme-toggle-inline {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.theme-toggle-inline:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+.theme-toggle-inline:active {
+  transform: scale(0.96);
+}
+
+.theme-toggle-inline .theme-toggle-icon,
+.theme-toggle-inline svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+}
