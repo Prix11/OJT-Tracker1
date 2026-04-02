@@ -414,6 +414,13 @@
         return isNaN(h) || h <= 0 ? 0 : h;
       }
 
+      function isValidTimeString(t) {
+        if (!t) return false;
+        var s = String(t).trim();
+        // Matches HH:MM in 24h format (e.g. 09:00, 17:30)
+        return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+      }
+
       function updateSummary() {
         var dateStr = $("work-date").value;
         var tIn = $("time-in").value;
@@ -541,8 +548,22 @@
             return;
           }
 
+          if (!isValidTimeString(tIn) || !isValidTimeString(tOut)) {
+            err.textContent = "Please enter valid time in and time out (HH:MM).";
+            return;
+          }
+
           if ((ot.overtimeStart && !ot.overtimeEnd) || (!ot.overtimeStart && ot.overtimeEnd)) {
             err.textContent = "Enter both overtime start and end, or leave both empty.";
+            return;
+          }
+
+          if (ot.overtimeStart && !isValidTimeString(ot.overtimeStart)) {
+            err.textContent = "Overtime start must be a valid time (HH:MM).";
+            return;
+          }
+          if (ot.overtimeEnd && !isValidTimeString(ot.overtimeEnd)) {
+            err.textContent = "Overtime end must be a valid time (HH:MM).";
             return;
           }
 
