@@ -82,6 +82,10 @@
       return "Incorrect password.";
     }
     if (code === "auth/user-not-found") return "No account found for this email.";
+    if (code === "auth/too-many-requests") {
+      return "Too many attempts. Wait a few minutes and try again.";
+    }
+    if (code === "auth/missing-email") return "Enter your email address.";
     return (err && err.message) || "Sign in failed.";
   }
 
@@ -383,6 +387,25 @@
     return firebase.auth().signOut();
   }
 
+  function cloudSendPasswordResetEmail(email) {
+    if (!useCloud()) {
+      return Promise.reject(
+        new Error("Password reset is only available when Firebase is configured.")
+      );
+    }
+    var addr = (email != null ? String(email) : "").trim();
+    if (!addr) {
+      return Promise.reject(new Error("Enter your email address."));
+    }
+    return firebaseInit()
+      .then(function () {
+        return firebase.auth().sendPasswordResetEmail(addr);
+      })
+      .catch(function (err) {
+        throw new Error(mapAuthError(err) || (err && err.message) || "Could not send reset email.");
+      });
+  }
+
   global.OJTCloud = {
     useCloud: useCloud,
     init: firebaseInit,
@@ -391,6 +414,7 @@
     register: cloudRegister,
     login: cloudLogin,
     logout: cloudLogout,
+    sendPasswordResetEmail: cloudSendPasswordResetEmail,
     getAllEntries: cloudGetAllEntries,
     getHoursData: cloudGetHoursData,
     syncHoursFromEntries: cloudSyncHoursFromEntries,

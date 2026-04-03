@@ -104,6 +104,17 @@
       return Promise.resolve();
     },
 
+    sendPasswordResetEmail: function (email) {
+      if (!isCloud()) {
+        return Promise.reject(
+          new Error(
+            "Password reset only works with cloud sign-in. Add Firebase to firebase-config.js (see firebase-config.example.js)."
+          )
+        );
+      }
+      return OJTCloud.sendPasswordResetEmail(email);
+    },
+
     getHoursData: function (user) {
       if (!user || !user.email) {
         return Promise.resolve({

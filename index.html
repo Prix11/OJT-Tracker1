@@ -220,6 +220,68 @@
       background: var(--surface-hover);
     }
 
+    .btn-link {
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .btn-link:hover {
+      color: var(--accent-dim);
+    }
+
+    .forgot-line {
+      margin: 0.75rem 0 0;
+      text-align: center;
+    }
+
+    .forgot-panel {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .forgot-panel-lead {
+      margin: 0 0 0.75rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .forgot-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .forgot-actions .btn {
+      width: auto;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .forgot-success {
+      font-size: 0.8125rem;
+      color: var(--accent);
+      margin: 0 0 0.5rem;
+      line-height: 1.45;
+    }
+
+    .forgot-panel .forgot-error {
+      margin: 0.5rem 0 0;
+      min-height: 1.25rem;
+    }
+
     .error {
       font-size: 0.8125rem;
       color: var(--danger);
@@ -531,7 +593,29 @@
               <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
               <p id="login-error" class="error" role="alert"></p>
               <button type="submit" class="btn btn-primary">Sign in</button>
+              <p class="forgot-line" id="forgot-password-wrap" hidden>
+                <button type="button" class="btn-link" id="btn-forgot-password">Forgot password?</button>
+              </p>
             </form>
+            <div id="forgot-password-panel" class="forgot-panel" hidden>
+              <p class="forgot-panel-lead">
+                Enter your account email. We will send you a link to reset your password.
+              </p>
+              <label for="reset-email">Email</label>
+              <input
+                id="reset-email"
+                name="resetEmail"
+                type="email"
+                autocomplete="email"
+                placeholder="you@school.edu"
+              />
+              <p id="forgot-error" class="error forgot-error" role="alert"></p>
+              <p id="forgot-success" class="forgot-success" role="status" hidden></p>
+              <div class="forgot-actions">
+                <button type="button" class="btn btn-primary" id="btn-send-reset">Send reset link</button>
+                <button type="button" class="btn btn-ghost" id="btn-cancel-reset">Cancel</button>
+              </div>
+            </div>
           </div>
 
           <div id="panel-register" class="form-panel" role="tabpanel" aria-labelledby="tab-register">
@@ -631,6 +715,15 @@
         $("panel-register").classList.toggle("active", !signin);
         $("login-error").textContent = "";
         $("register-error").textContent = "";
+        var fp = $("forgot-password-panel");
+        var fw = $("forgot-password-wrap");
+        if (fp) fp.hidden = true;
+        if ($("forgot-error")) $("forgot-error").textContent = "";
+        if ($("forgot-success")) {
+          $("forgot-success").hidden = true;
+          $("forgot-success").textContent = "";
+        }
+        if (fw) fw.hidden = !OJTApp.isCloud() || !signin;
       }
 
       function showView(name) {
@@ -810,6 +903,59 @@
             .catch(function () {
               err.textContent =
                 "Could not sign in. Try https or a current browser.";
+            });
+        });
+
+        var forgotWrap = $("forgot-password-wrap");
+        if (forgotWrap) {
+          forgotWrap.hidden = !OJTApp.isCloud();
+        }
+
+        $("btn-forgot-password").addEventListener("click", function () {
+          $("forgot-password-panel").hidden = false;
+          if (forgotWrap) forgotWrap.hidden = true;
+          $("forgot-error").textContent = "";
+          $("forgot-success").hidden = true;
+          $("forgot-success").textContent = "";
+          var loginEmail = $("email").value.trim();
+          if (loginEmail && $("reset-email")) {
+            $("reset-email").value = loginEmail;
+          }
+          $("reset-email").focus();
+        });
+
+        $("btn-cancel-reset").addEventListener("click", function () {
+          $("forgot-password-panel").hidden = true;
+          if (forgotWrap) forgotWrap.hidden = !OJTApp.isCloud();
+          $("forgot-error").textContent = "";
+        });
+
+        $("btn-send-reset").addEventListener("click", function () {
+          var email = $("reset-email").value.trim();
+          $("forgot-error").textContent = "";
+          $("forgot-success").hidden = true;
+          $("forgot-success").textContent = "";
+          if (!isValidEmail(email)) {
+            $("forgot-error").textContent = "Please enter a valid email address.";
+            return;
+          }
+          var btn = $("btn-send-reset");
+          btn.disabled = true;
+          OJTApp.init()
+            .then(function () {
+              return OJTApp.sendPasswordResetEmail(email);
+            })
+            .then(function () {
+              $("forgot-success").textContent =
+                "If an account exists for that email, you will receive a link to reset your password. Check your inbox and spam folder.";
+              $("forgot-success").hidden = false;
+            })
+            .catch(function (err) {
+              $("forgot-error").textContent =
+                (err && err.message) || "Could not send reset email.";
+            })
+            .then(function () {
+              btn.disabled = false;
             });
         });
 
