@@ -208,6 +208,39 @@
       background: var(--btn-primary-hover);
     }
 
+    .btn-primary:disabled {
+      opacity: 0.85;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-login-content {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-inline-spinner {
+      width: 1.125rem;
+      height: 1.125rem;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      opacity: 0.9;
+      animation: ojt-spin 0.75s linear infinite;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn-inline-spinner {
+        animation: none;
+        border-top-color: currentColor;
+        opacity: 0.55;
+      }
+    }
+
     .btn-ghost {
       background: transparent;
       color: var(--muted);
@@ -346,6 +379,17 @@
       color: var(--text);
       border-color: var(--accent);
       box-shadow: 0 0 0 1px var(--focus-ring);
+    }
+
+    .auth-tab:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-link:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
     }
 
     .form-panel {
@@ -592,7 +636,12 @@
               <label for="password">Password</label>
               <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
               <p id="login-error" class="error" role="alert"></p>
-              <button type="submit" class="btn btn-primary">Sign in</button>
+              <button type="submit" class="btn btn-primary" id="btn-login-submit">
+                <span class="btn-login-content">
+                  <span class="btn-inline-spinner" id="login-submit-spinner" hidden aria-hidden="true"></span>
+                  <span id="login-submit-label">Sign in</span>
+                </span>
+              </button>
               <p class="forgot-line" id="forgot-password-wrap" hidden>
                 <button type="button" class="btn-link" id="btn-forgot-password">Forgot password?</button>
               </p>
@@ -879,6 +928,29 @@
           setAuthTab(false);
         });
 
+        function setLoginLoading(busy) {
+          var btn = $("btn-login-submit");
+          var spin = $("login-submit-spinner");
+          var label = $("login-submit-label");
+          var form = $("form-login");
+          var em = $("email");
+          var pw = $("password");
+          var rem = $("remember");
+          var t1 = $("tab-signin");
+          var t2 = $("tab-register");
+          var bf = $("btn-forgot-password");
+          if (btn) btn.disabled = !!busy;
+          if (spin) spin.hidden = !busy;
+          if (label) label.textContent = busy ? "Signing in…" : "Sign in";
+          if (form) form.setAttribute("aria-busy", busy ? "true" : "false");
+          if (em) em.disabled = !!busy;
+          if (pw) pw.disabled = !!busy;
+          if (rem) rem.disabled = !!busy;
+          if (t1) t1.disabled = !!busy;
+          if (t2) t2.disabled = !!busy;
+          if (bf) bf.disabled = !!busy;
+        }
+
         $("form-login").addEventListener("submit", function (e) {
           e.preventDefault();
           var email = $("email").value.trim();
@@ -891,6 +963,7 @@
             return;
           }
 
+          setLoginLoading(true);
           OJTApp.login(email, password, $("remember").checked)
             .then(function (res) {
               if (!res.ok) {
@@ -903,6 +976,9 @@
             .catch(function () {
               err.textContent =
                 "Could not sign in. Try https or a current browser.";
+            })
+            .then(function () {
+              setLoginLoading(false);
             });
         });
 
