@@ -106,11 +106,40 @@
     return getAccounts().length > 0;
   }
 
+  function deleteAccount(email, password) {
+    var norm = normalizeEmail(email);
+    if (!norm) {
+      return Promise.resolve({ ok: false, error: "Please enter a valid email." });
+    }
+    if (!password) {
+      return Promise.resolve({ ok: false, error: "Please enter your password." });
+    }
+    return hashPassword(norm, password).then(function (hash) {
+      var accounts = getAccounts();
+      var idx = accounts.findIndex(function (a) {
+        return a.email === norm;
+      });
+      if (idx === -1) {
+        return {
+          ok: false,
+          error: "Account not found on this browser."
+        };
+      }
+      if (accounts[idx].passHash !== hash) {
+        return { ok: false, error: "Incorrect password." };
+      }
+      accounts.splice(idx, 1);
+      saveAccounts(accounts);
+      return { ok: true, email: norm };
+    });
+  }
+
   global.OJTAuth = {
     normalizeEmail: normalizeEmail,
     registerAccount: registerAccount,
     verifyLogin: verifyLogin,
     hasAnyAccount: hasAnyAccount,
-    getAccounts: getAccounts
+    getAccounts: getAccounts,
+    deleteAccount: deleteAccount
   };
 })(typeof window !== "undefined" ? window : self);

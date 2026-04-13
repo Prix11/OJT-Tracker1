@@ -86,6 +86,9 @@
       return "Too many attempts. Wait a few minutes and try again.";
     }
     if (code === "auth/missing-email") return "Enter your email address.";
+    if (code === "auth/requires-recent-login") {
+      return "Sign out and sign in again, then retry.";
+    }
     return (err && err.message) || "Sign in failed.";
   }
 
@@ -387,6 +390,81 @@
     return firebase.auth().signOut();
   }
 
+  function cloudDeleteUserFirestoreData(uid) {
+    var db = firebase.firestore();
+    var userRef = db.collection("users").doc(uid);
+    return userRef
+      .collection("entries")
+      .get()
+      .then(function (snap) {
+        var refs = [];
+        snap.forEach(function (d) {
+          refs.push(d.ref);
+        });
+        function deleteChunk(start) {
+          if (start >= refs.length) return Promise.resolve();
+          var batch = db.batch();
+          var end = Math.min(start + 450, refs.length);
+          for (var i = start; i < end; i++) {
+            batch.delete(refs[i]);
+          }
+          return batch.commit().then(function () {
+            return deleteChunk(end);
+          });
+        }
+        return deleteChunk(0);
+      })
+      .then(function () {
+        return userRef.collection("meta").doc("dashboard").delete();
+      })
+      .catch(function (err) {
+        var mapped = mapFirestoreError(err);
+        throw new Error(mapped || (err && err.message) || "Could not delete stored data.");
+      });
+  }
+
+  function cloudDeleteAccount(password) {
+    if (!useCloud()) {
+      return Promise.reject(new Error("Cloud sync is not configured."));
+    }
+    var raw = (password != null ? String(password) : "").trim();
+    if (!raw) {
+      return Promise.reject(new Error("Enter your password to confirm."));
+    }
+    var u = firebase.auth().currentUser;
+    if (!u || !u.email) {
+      return Promise.reject(new Error("Not signed in."));
+    }
+    var cred = firebase.auth.EmailAuthProvider.credential(u.email, raw);
+    return firebaseInit()
+      .then(function () {
+        return u.reauthenticateWithCredential(cred);
+      })
+      .then(function () {
+        return ensureAuthToken(u);
+      })
+      .then(function () {
+        return cloudDeleteUserFirestoreData(u.uid);
+      })
+      .then(function () {
+        return u.delete();
+      })
+      .catch(function (err) {
+        var code = err && err.code;
+        if (code === "auth/requires-recent-login") {
+          throw new Error(
+            "For security, sign out and sign in again, then delete your account."
+          );
+        }
+        throw new Error(
+          mapAuthError(err) ||
+            mapFirestoreError(err) ||
+            (err && err.message) ||
+            "Could not delete account."
+        );
+      });
+  }
+
   function cloudSendPasswordResetEmail(email) {
     if (!useCloud()) {
       return Promise.reject(
@@ -415,6 +493,7 @@
     login: cloudLogin,
     logout: cloudLogout,
     sendPasswordResetEmail: cloudSendPasswordResetEmail,
+    deleteAccount: cloudDeleteAccount,
     getAllEntries: cloudGetAllEntries,
     getHoursData: cloudGetHoursData,
     syncHoursFromEntries: cloudSyncHoursFromEntries,

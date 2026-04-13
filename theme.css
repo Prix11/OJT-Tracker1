@@ -35,6 +35,12 @@ html[data-theme="light"] .sync-banner.ok {
   color: #0a6b47;
 }
 
+html[data-theme="light"] .login-flash {
+  background: rgba(15, 143, 95, 0.1);
+  border-color: rgba(15, 143, 95, 0.25);
+  color: #0a6b47;
+}
+
 html[data-theme="light"] tbody tr:hover {
   background: rgba(15, 143, 95, 0.08);
 }

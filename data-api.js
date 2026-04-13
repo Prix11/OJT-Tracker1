@@ -115,6 +115,32 @@
       return OJTCloud.sendPasswordResetEmail(email);
     },
 
+    deleteAccount: function (password) {
+      var user = OJTApp.getUser();
+      if (!user || !user.email) {
+        return Promise.reject(new Error("Not signed in."));
+      }
+      var p = (password != null ? String(password) : "").trim();
+      if (!p) {
+        return Promise.reject(new Error("Enter your password to confirm."));
+      }
+      if (isCloud() && user.uid) {
+        return OJTCloud.deleteAccount(p).then(function () {
+          clearLocalUser();
+        });
+      }
+      return OJTAuth.deleteAccount(user.email, p).then(function (res) {
+        if (!res.ok) {
+          return Promise.reject(new Error(res.error || "Could not delete account."));
+        }
+        return OJTDB.init().then(function () {
+          return OJTDB.purgeUserData(user.email);
+        }).then(function () {
+          clearLocalUser();
+        });
+      });
+    },
+
     getHoursData: function (user) {
       if (!user || !user.email) {
         return Promise.resolve({

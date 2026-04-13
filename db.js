@@ -307,6 +307,37 @@
     }
   }
 
+  function purgeUserData(userEmail) {
+    var norm = normalizeUserEmail(userEmail);
+    if (!norm) return Promise.reject(new Error("Missing user"));
+    return getAllEntriesForUser(norm).then(function (entries) {
+      if (!entries.length) {
+        try {
+          global.localStorage.removeItem(hoursStorageKey(norm));
+        } catch (e) {}
+        return;
+      }
+      return openDatabase().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(STORE_ENTRIES, "readwrite");
+          var store = tx.objectStore(STORE_ENTRIES);
+          for (var i = 0; i < entries.length; i++) {
+            store.delete(entries[i].id);
+          }
+          tx.oncomplete = function () {
+            try {
+              global.localStorage.removeItem(hoursStorageKey(norm));
+            } catch (e) {}
+            resolve();
+          };
+          tx.onerror = function () {
+            reject(tx.error);
+          };
+        });
+      });
+    });
+  }
+
   function setGoal(goal, userEmail) {
     var norm = normalizeUserEmail(userEmail);
     if (!norm) return;
@@ -335,6 +366,7 @@
     getHoursData: getHoursData,
     setGoal: setGoal,
     migrateLegacyToUser: migrateLegacyToUser,
-    normalizeUserEmail: normalizeUserEmail
+    normalizeUserEmail: normalizeUserEmail,
+    purgeUserData: purgeUserData
   };
 })(typeof window !== "undefined" ? window : self);
