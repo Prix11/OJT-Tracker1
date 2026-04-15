@@ -357,6 +357,22 @@
       color: #7fd4a8;
     }
 
+    .goal-congrats-modal-box {
+      max-width: min(32rem, calc(100vw - 2rem));
+    }
+
+    .goal-congrats-modal-body {
+      margin: 0 0 1.25rem;
+      font-size: 0.9375rem;
+      line-height: 1.55;
+      color: var(--text);
+      text-align: left;
+    }
+
+    #goal-congrats-modal {
+      z-index: 650;
+    }
+
     .auth-tabs {
       display: flex;
       gap: 0.5rem;
@@ -1008,6 +1024,23 @@
     </div>
   </div>
 
+  <div
+    id="goal-congrats-modal"
+    class="modal-overlay"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="goal-congrats-modal-title"
+  >
+    <div class="modal-box goal-congrats-modal-box">
+      <h2 id="goal-congrats-modal-title">🎉 Congratulations</h2>
+      <p class="modal-lead goal-congrats-modal-body" id="goal-congrats-modal-text"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-goal-congrats-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div id="settings-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
     <div class="modal-box">
       <h2 id="settings-modal-title">Account</h2>
@@ -1098,6 +1131,114 @@
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
       }
 
+      var GOAL_CONGRATS_DISMISS_KEY = "ojt_goal_congrats_dismissed";
+      var GOAL_CONGRATS_MESSAGE =
+        "Congratulations on successfully completing your OJT! Your hard work, dedication, and perseverance have truly paid off. Wishing you success in what comes next!";
+
+      function normalizeEmailForGoalStore(e) {
+        return String(e || "")
+          .trim()
+          .toLowerCase();
+      }
+
+      function goalCongratsDismissedFor(email, goalNum) {
+        try {
+          var raw = localStorage.getItem(GOAL_CONGRATS_DISMISS_KEY);
+          if (!raw) return false;
+          var o = JSON.parse(raw);
+          if (!o || typeof o !== "object") return false;
+          return (
+            normalizeEmailForGoalStore(o.email) === normalizeEmailForGoalStore(email) &&
+            typeof o.goal === "number" &&
+            Math.abs(o.goal - goalNum) < 1e-6
+          );
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function clearGoalCongratsDismissIfBelow(email, goalNum, total) {
+        if (total + 1e-6 < goalNum) {
+          try {
+            var raw = localStorage.getItem(GOAL_CONGRATS_DISMISS_KEY);
+            if (!raw) return;
+            var o = JSON.parse(raw);
+            if (
+              o &&
+              normalizeEmailForGoalStore(o.email) === normalizeEmailForGoalStore(email) &&
+              typeof o.goal === "number" &&
+              Math.abs(o.goal - goalNum) < 1e-6
+            ) {
+              localStorage.removeItem(GOAL_CONGRATS_DISMISS_KEY);
+            }
+          } catch (e) {}
+        }
+      }
+
+      function persistGoalCongratsDismiss() {
+        var user = OJTApp.getUser();
+        if (!user || !user.email) return;
+        var el = $("input-goal");
+        if (!el) return;
+        var g = parseFloat(String(el.value).replace(",", "."), 10);
+        if (isNaN(g) || g <= 0) return;
+        try {
+          localStorage.setItem(
+            GOAL_CONGRATS_DISMISS_KEY,
+            JSON.stringify({
+              email: normalizeEmailForGoalStore(user.email),
+              goal: g
+            })
+          );
+        } catch (e) {}
+      }
+
+      function closeGoalCongratsModal() {
+        var modal = $("goal-congrats-modal");
+        if (modal) modal.hidden = true;
+      }
+
+      function acknowledgeGoalCongratsModal() {
+        persistGoalCongratsDismiss();
+        closeGoalCongratsModal();
+      }
+
+      function openGoalCongratsModal() {
+        var modal = $("goal-congrats-modal");
+        var textEl = $("goal-congrats-modal-text");
+        if (!modal || !textEl) return;
+        textEl.textContent = GOAL_CONGRATS_MESSAGE;
+        modal.hidden = false;
+        var okBtn = $("btn-goal-congrats-ok");
+        if (okBtn) okBtn.focus();
+      }
+
+      function updateGoalCongratulationsUI(email, total, goal) {
+        var modal = $("goal-congrats-modal");
+        if (!modal) return;
+
+        var g =
+          goal != null && goal !== "" && !isNaN(Number(goal)) ? Number(goal) : NaN;
+        if (isNaN(g) || g <= 0) {
+          modal.hidden = true;
+          return;
+        }
+
+        if (total + 1e-6 < g) {
+          modal.hidden = true;
+          clearGoalCongratsDismissIfBelow(email, g, total);
+          return;
+        }
+
+        if (goalCongratsDismissedFor(email, g)) {
+          modal.hidden = true;
+          return;
+        }
+
+        if (!modal.hidden) return;
+        openGoalCongratsModal();
+      }
+
       function renderLanding(user) {
         var email = user.email;
         OJTApp.getHoursData(user).then(function (data) {
@@ -1137,6 +1278,8 @@
               remEl.textContent = formatHoursMinutes(remaining > 0 ? remaining : 0);
             }
           }
+
+          updateGoalCongratulationsUI(email, total, goal);
         });
       }
 
@@ -1338,9 +1481,23 @@
           if (ev.target === $("settings-modal")) closeSettingsModal();
         });
         document.addEventListener("keydown", function (ev) {
+          if (ev.key !== "Escape") return;
+          var gc = $("goal-congrats-modal");
+          if (gc && !gc.hidden) {
+            acknowledgeGoalCongratsModal();
+            return;
+          }
           var m = $("settings-modal");
-          if (ev.key === "Escape" && m && !m.hidden) closeSettingsModal();
+          if (m && !m.hidden) closeSettingsModal();
         });
+
+        $("goal-congrats-modal").addEventListener("click", function (ev) {
+          if (ev.target === $("goal-congrats-modal")) acknowledgeGoalCongratsModal();
+        });
+        var btnGoalCongratsOk = $("btn-goal-congrats-ok");
+        if (btnGoalCongratsOk) {
+          btnGoalCongratsOk.addEventListener("click", acknowledgeGoalCongratsModal);
+        }
 
         $("btn-delete-account").addEventListener("click", function () {
           var pw = $("delete-account-password").value;
@@ -1525,6 +1682,7 @@
             }
           });
         }
+
       }
 
       if (document.readyState === "loading") {
