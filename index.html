@@ -7,11 +7,14 @@
   <script src="theme.js"></script>
   <script>OJTTheme.init();</script>
   <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
     :root {
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
       --bg: #0f1419;
       --surface: #1a222c;
       --surface-hover: #232d3a;
@@ -79,6 +82,8 @@
       border-radius: var(--radius);
       padding: 2rem 2rem 1.75rem;
       box-shadow: var(--shadow);
+      transition: box-shadow 0.35s var(--ease-soft), border-color 0.25s var(--ease-soft),
+        transform 0.35s var(--ease-out);
     }
 
     .panel.wide {
@@ -149,7 +154,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-bottom: 1rem;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.22s var(--ease-soft), box-shadow 0.22s var(--ease-soft);
     }
 
     input:focus {
@@ -192,7 +197,8 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
+      transition: background 0.22s var(--ease-soft), transform 0.2s var(--ease-out),
+        opacity 0.22s var(--ease-soft), box-shadow 0.22s var(--ease-soft);
     }
 
     .btn:active {
@@ -368,7 +374,8 @@
       font: inherit;
       font-weight: 600;
       font-size: 0.875rem;
-      transition: border-color 0.15s, color 0.15s;
+      transition: border-color 0.22s var(--ease-soft), color 0.22s var(--ease-soft),
+        box-shadow 0.22s var(--ease-soft), background 0.22s var(--ease-soft);
     }
 
     .auth-tab:hover {
@@ -392,20 +399,58 @@
       pointer-events: none;
     }
 
-    .form-panel {
-      display: none;
+    .auth-stack {
+      display: grid;
+      width: 100%;
+      grid-template-columns: 1fr;
     }
 
-    .form-panel.active {
-      display: block;
+    .auth-stack > .form-panel {
+      grid-area: 1 / 1;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 0.32s var(--ease-out), visibility 0.32s, transform 0.32s var(--ease-out);
+      z-index: 1;
     }
 
-    .view {
-      display: none;
+    .auth-stack > .form-panel.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+      z-index: 2;
     }
 
-    .view.active {
-      display: block;
+    .view-stack {
+      display: grid;
+      width: 100%;
+      place-items: start center;
+      align-items: start;
+    }
+
+    .view-stack > .view {
+      grid-area: 1 / 1;
+      width: 100%;
+      max-width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(14px);
+      transition: opacity 0.4s var(--ease-out), visibility 0.4s, transform 0.4s var(--ease-out);
+      z-index: 1;
+    }
+
+    .view-stack > .view.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+      z-index: 2;
     }
 
     .loading-panel {
@@ -478,7 +523,8 @@
       border-radius: 12px;
       cursor: pointer;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      transition: border-color 0.15s, background 0.15s;
+      transition: border-color 0.22s var(--ease-soft), background 0.22s var(--ease-soft),
+        transform 0.2s var(--ease-out), box-shadow 0.22s var(--ease-soft);
     }
 
     .btn-settings:hover {
@@ -495,16 +541,31 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.55);
       z-index: 600;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1rem;
+      background: rgba(0, 0, 0, 0);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.32s var(--ease-out), visibility 0.32s, background 0.32s ease;
+    }
+
+    .modal-overlay:not([hidden]) {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      background: rgba(0, 0, 0, 0.55);
     }
 
     .modal-overlay[hidden] {
-      display: none !important;
+      display: flex !important;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.26s var(--ease-soft), visibility 0.26s, background 0.26s ease;
     }
 
     .modal-box {
@@ -517,6 +578,20 @@
       box-shadow: var(--shadow);
       max-height: 90vh;
       overflow-y: auto;
+      transform: translateY(18px) scale(0.97);
+      opacity: 0;
+      transition: transform 0.38s var(--ease-out), opacity 0.32s var(--ease-out);
+    }
+
+    .modal-overlay:not([hidden]) .modal-box {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .modal-overlay[hidden] .modal-box {
+      transform: translateY(14px) scale(0.97);
+      opacity: 0;
+      transition: transform 0.28s var(--ease-soft), opacity 0.24s var(--ease-soft);
     }
 
     .modal-box h2 {
@@ -645,6 +720,8 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 1rem;
+      transition: border-color 0.28s var(--ease-soft), background 0.28s var(--ease-soft),
+        transform 0.3s var(--ease-out);
     }
 
     .stat-value {
@@ -747,17 +824,31 @@
         padding: 1.5rem;
       }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .view-stack > .view,
+      .auth-stack > .form-panel,
+      .modal-overlay,
+      .modal-box,
+      .panel,
+      .btn,
+      .btn-settings,
+      .auth-tab {
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="bg-pattern" aria-hidden="true"></div>
     <div class="wrap">
+      <div class="view-stack">
       <!-- Shown until Firebase / session knows if you are signed in (avoids login flash) -->
       <section id="view-loading" class="view active" aria-busy="true" aria-live="polite">
-        <div class="panel loading-panel">
+        <div class="panel loading-panel" id="loading-panel">
           <p class="loading-text" id="loading-text">Loading…</p>
-          <div class="loading-spinner" aria-hidden="true"></div>
+          <div class="loading-spinner" id="loading-spinner" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -792,6 +883,7 @@
             </label>
           </div>
 
+          <div class="auth-stack">
           <div id="panel-login" class="form-panel active" role="tabpanel" aria-labelledby="tab-signin">
             <form id="form-login" novalidate>
               <label for="email">Email</label>
@@ -841,6 +933,7 @@
               <p id="register-error" class="error" role="alert"></p>
               <button type="submit" class="btn btn-primary">Create account</button>
             </form>
+          </div>
           </div>
 
           <p class="hint" id="setup-hint">
@@ -911,6 +1004,7 @@
           </p>
         </div>
       </section>
+      </div>
     </div>
   </div>
 
@@ -942,6 +1036,7 @@
   <script src="db.js"></script>
   <script src="cloud.js"></script>
   <script src="data-api.js"></script>
+  <script src="toast.js"></script>
   <script>
     (function () {
       function $(id) {
@@ -1055,6 +1150,26 @@
         });
       }
 
+      function consumePendingDashboardToast() {
+        var raw = null;
+        try {
+          raw = sessionStorage.getItem("ojt_toast_pending");
+          if (raw) sessionStorage.removeItem("ojt_toast_pending");
+        } catch (e) {}
+        if (!raw || typeof OJTToast === "undefined" || !OJTToast.show) return;
+        try {
+          var o = JSON.parse(raw);
+          if (!o || typeof o !== "object") return;
+          OJTToast.show({
+            type: o.type || "success",
+            title: o.title != null ? String(o.title) : "Success",
+            message: o.message != null ? String(o.message) : "",
+            duration:
+              typeof o.duration === "number" && !isNaN(o.duration) ? o.duration : 4000
+          });
+        } catch (e2) {}
+      }
+
       function init() {
         var hint = $("setup-hint");
         if (hint) {
@@ -1082,12 +1197,29 @@
         }
 
         var loadingMsg = $("loading-text");
-        if (loadingMsg) {
-          var fromApp = false;
-          try {
-            fromApp = sessionStorage.getItem("ojt_return_home") === "1";
-            if (fromApp) sessionStorage.removeItem("ojt_return_home");
-          } catch (e) {}
+        var loadingPanel = $("loading-panel");
+        var loadingSpinner = $("loading-spinner");
+        var fromApp = false;
+        var pendingToastObj = null;
+        try {
+          fromApp = sessionStorage.getItem("ojt_return_home") === "1";
+          if (fromApp) sessionStorage.removeItem("ojt_return_home");
+        } catch (e) {}
+        try {
+          var pr = sessionStorage.getItem("ojt_toast_pending");
+          if (pr) pendingToastObj = JSON.parse(pr);
+        } catch (e) {}
+        var pendingFromSave =
+          fromApp &&
+          pendingToastObj &&
+          typeof pendingToastObj === "object" &&
+          !Array.isArray(pendingToastObj);
+
+        if (pendingFromSave && loadingPanel && loadingMsg && loadingSpinner) {
+          loadingPanel.hidden = true;
+          loadingMsg.hidden = true;
+          loadingSpinner.hidden = true;
+        } else if (loadingMsg) {
           if (fromApp) {
             loadingMsg.textContent = "Opening your dashboard…";
           } else if (OJTApp.isCloud()) {
@@ -1104,17 +1236,49 @@
           .then(function () {
             var user = OJTApp.getUser();
             if (user && user.email) {
-              showView("landing");
               $("landing-greeting").textContent =
                 "Welcome, " + firstNameFromEmail(user.email);
               $("landing-email").textContent = user.email;
+
+              showView("landing");
+
+              if (pendingFromSave && typeof OJTToast !== "undefined" && OJTToast.show) {
+                try {
+                  sessionStorage.removeItem("ojt_toast_pending");
+                } catch (e) {}
+                requestAnimationFrame(function () {
+                  OJTToast.show({
+                    type: pendingToastObj.type || "success",
+                    title:
+                      pendingToastObj.title != null
+                        ? String(pendingToastObj.title)
+                        : "Success",
+                    message:
+                      pendingToastObj.message != null ? String(pendingToastObj.message) : "",
+                    duration:
+                      typeof pendingToastObj.duration === "number" &&
+                      !isNaN(pendingToastObj.duration)
+                        ? pendingToastObj.duration
+                        : 4500
+                  });
+                });
+              }
               return OJTApp.syncHours(user).then(function () {
                 renderLanding(OJTApp.getUser());
+                if (!pendingFromSave) {
+                  setTimeout(consumePendingDashboardToast, 120);
+                }
               });
             }
+            try {
+              sessionStorage.removeItem("ojt_toast_pending");
+            } catch (e) {}
             showView("login");
           })
           .catch(function () {
+            try {
+              sessionStorage.removeItem("ojt_toast_pending");
+            } catch (e) {}
             showView("login");
           });
 

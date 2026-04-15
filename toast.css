@@ -1,0 +1,217 @@
+/* OJT toast stack — used by toast.js (top-right, stacked downward) */
+#ojt-toast-root {
+  position: fixed;
+  z-index: 100000;
+  top: 1.25rem;
+  bottom: auto;
+  right: 1.25rem;
+  left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-end;
+  justify-content: flex-start;
+  pointer-events: none;
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+#ojt-toast-root .ojt-toast {
+  pointer-events: auto;
+}
+
+.ojt-toast {
+  --toast-bar: var(--accent, #3db88a);
+  --toast-icon-color: var(--accent, #3db88a);
+  width: 100%;
+  min-width: 280px;
+  background: var(--surface, #1a222c);
+  color: var(--text, #e8edf4);
+  border-radius: 12px;
+  box-shadow: var(--shadow, 0 16px 40px rgba(0, 0, 0, 0.4));
+  border: 1px solid var(--border, #2d3a4a);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(0.75rem);
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ojt-toast--in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.ojt-toast--out {
+  opacity: 0;
+  transform: translateX(0.5rem);
+  transition:
+    opacity 0.26s cubic-bezier(0.4, 0, 1, 1),
+    transform 0.26s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.ojt-toast-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0.85rem 0.65rem 0.85rem 0;
+  position: relative;
+}
+
+.ojt-toast-accent {
+  width: 4px;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 3rem;
+  background: var(--toast-bar);
+  border-radius: 0 2px 2px 0;
+  margin-right: 0.65rem;
+}
+
+.ojt-toast-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--toast-icon-color);
+  margin-right: 0.65rem;
+}
+
+.ojt-toast-icon svg {
+  display: block;
+}
+
+.ojt-toast-copy {
+  flex: 1;
+  min-width: 0;
+  padding-right: 2rem;
+}
+
+.ojt-toast-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.ojt-toast-msg {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted, #8b9aaf);
+  line-height: 1.45;
+}
+
+.ojt-toast-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.45rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted, #8b9aaf);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.ojt-toast-close:hover {
+  color: var(--text, #e8edf4);
+  background: var(--surface-hover, #232d3a);
+}
+
+.ojt-toast-close:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring, rgba(61, 184, 138, 0.25));
+}
+
+.ojt-toast-progress {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.ojt-toast-progress-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(1);
+  background: var(--toast-bar);
+  animation-name: ojt-toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-duration: var(--ojt-toast-dur, 4s);
+}
+
+@keyframes ojt-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.ojt-toast--success {
+  --toast-bar: var(--accent, #3db88a);
+  --toast-icon-color: var(--accent, #3db88a);
+}
+
+.ojt-toast--error {
+  --toast-bar: var(--danger, #e85d5d);
+  --toast-icon-color: var(--danger, #e85d5d);
+}
+
+.ojt-toast--deleted {
+  --toast-bar: var(--danger, #e85d5d);
+  --toast-icon-color: var(--danger, #e85d5d);
+}
+
+.ojt-toast--warning {
+  --toast-bar: var(--warning, #e8b84a);
+  --toast-icon-color: var(--warning, #e8b84a);
+}
+
+.ojt-toast--info {
+  --toast-bar: #3b82f6;
+  --toast-icon-color: #3b82f6;
+}
+
+html[data-theme="light"] .ojt-toast-progress {
+  background: rgba(15, 35, 55, 0.08);
+}
+
+@media (max-width: 480px) {
+  #ojt-toast-root {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .ojt-toast {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ojt-toast,
+  .ojt-toast--out {
+    transition-duration: 0.01ms !important;
+  }
+
+  .ojt-toast-progress-fill {
+    animation: none !important;
+    transform: scaleX(0) !important;
+  }
+}

@@ -7,11 +7,14 @@
   <script src="theme.js"></script>
   <script>OJTTheme.init();</script>
   <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="toast.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
     :root {
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
       --bg: #0f1419;
       --surface: #1a222c;
       --surface-hover: #232d3a;
@@ -78,6 +81,8 @@
       border-radius: var(--radius);
       padding: 2rem;
       box-shadow: var(--shadow);
+      transition: box-shadow 0.35s var(--ease-soft), border-color 0.25s var(--ease-soft),
+        transform 0.35s var(--ease-out);
     }
 
     .top-nav {
@@ -154,6 +159,10 @@
       color: var(--muted);
       font-weight: 600;
       white-space: nowrap;
+    }
+
+    tbody tr {
+      transition: background 0.22s var(--ease-soft);
     }
 
     tbody tr:hover {
@@ -259,16 +268,31 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.55);
       z-index: 200;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1rem;
+      background: rgba(0, 0, 0, 0);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.32s var(--ease-out), visibility 0.32s, background 0.32s ease;
+    }
+
+    .modal-overlay:not([hidden]) {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      background: rgba(0, 0, 0, 0.55);
     }
 
     .modal-overlay[hidden] {
-      display: none !important;
+      display: flex !important;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.26s var(--ease-soft), visibility 0.26s, background 0.26s ease;
     }
 
     .modal {
@@ -281,6 +305,20 @@
       box-shadow: var(--shadow);
       max-height: 90vh;
       overflow-y: auto;
+      transform: translateY(18px) scale(0.97);
+      opacity: 0;
+      transition: transform 0.38s var(--ease-out), opacity 0.32s var(--ease-out);
+    }
+
+    .modal-overlay:not([hidden]) .modal {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .modal-overlay[hidden] .modal {
+      transform: translateY(14px) scale(0.97);
+      opacity: 0;
+      transition: transform 0.28s var(--ease-soft), opacity 0.24s var(--ease-soft);
     }
 
     .modal h2 {
@@ -367,6 +405,42 @@
       font-size: 0.875rem;
       margin-top: 0.5rem;
     }
+
+    .modal-lead {
+      margin: 0 0 1rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .modal-actions .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .modal-actions .btn-danger:hover {
+      filter: brightness(1.08);
+    }
+
+    .modal-actions .btn-danger:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .modal-overlay,
+      .modal,
+      .panel,
+      tbody tr {
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -452,6 +526,24 @@
     </div>
   </div>
 
+  <div
+    id="delete-confirm-modal"
+    class="modal-overlay"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-confirm-title"
+  >
+    <div class="modal">
+      <h2 id="delete-confirm-title">Delete this record?</h2>
+      <p id="delete-confirm-lead" class="modal-lead"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-danger" id="btn-delete-confirm">Delete</button>
+        <button type="button" class="btn-secondary" id="btn-delete-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -460,6 +552,7 @@
   <script src="db.js"></script>
   <script src="cloud.js"></script>
   <script src="data-api.js"></script>
+  <script src="toast.js"></script>
   <script>
     (function () {
       function $(id) {
@@ -468,6 +561,43 @@
 
       var currentUser = null;
       var editingEntryId = null;
+      var editingEntrySnapshot = null;
+      var cachedEntriesList = null;
+      var deleteConfirmEntry = null;
+
+      function cloneEntryForEdit(e) {
+        return {
+          id: e.id,
+          date: e.date,
+          timeIn: e.timeIn,
+          timeOut: e.timeOut,
+          breakMinutes: e.breakMinutes,
+          overtimeStart: e.overtimeStart,
+          overtimeEnd: e.overtimeEnd,
+          overtimeHours: e.overtimeHours,
+          grossHours: e.grossHours,
+          netHours: e.netHours,
+          totalHours: e.totalHours,
+          createdAt: e.createdAt,
+          userEmail: e.userEmail
+        };
+      }
+
+      function replaceEntryInList(entries, entry) {
+        var out = [];
+        var id = String(entry.id);
+        var replaced = false;
+        for (var i = 0; i < entries.length; i++) {
+          if (String(entries[i].id) === id) {
+            out.push(entry);
+            replaced = true;
+          } else {
+            out.push(entries[i]);
+          }
+        }
+        if (!replaced) out.push(entry);
+        return out;
+      }
 
       function formatTime(t) {
         if (!t) return "—";
@@ -609,13 +739,40 @@
             netHours: Math.round(net * 1000) / 1000,
             totalHours: Math.round(total * 1000) / 1000,
             createdAt: existingEntry.createdAt != null ? existingEntry.createdAt : Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            userEmail: existingEntry.userEmail
           }
         };
       }
 
+      function setEditSaveBusy(busy) {
+        var b = !!busy;
+        var saveBtn = $("btn-save-edit");
+        var cancelBtn = $("btn-cancel-edit");
+        var form = $("form-edit");
+        if (saveBtn) {
+          saveBtn.disabled = b;
+          saveBtn.textContent = b ? "Saving…" : "Save changes";
+        }
+        if (cancelBtn) cancelBtn.disabled = b;
+        if (form) form.setAttribute("aria-busy", b ? "true" : "false");
+        [
+          "edit-date",
+          "edit-time-in",
+          "edit-time-out",
+          "edit-break",
+          "edit-ot-in",
+          "edit-ot-out"
+        ].forEach(function (id) {
+          var el = $(id);
+          if (el) el.disabled = b;
+        });
+      }
+
       function openEditModal(entry) {
         editingEntryId = entry.id;
+        editingEntrySnapshot = cloneEntryForEdit(entry);
+        setEditSaveBusy(false);
         $("edit-date").value = entry.date || "";
         $("edit-time-in").value = entry.timeIn ? entry.timeIn.slice(0, 5) : "";
         $("edit-time-out").value = entry.timeOut ? entry.timeOut.slice(0, 5) : "";
@@ -632,10 +789,39 @@
         $("edit-date").focus();
       }
 
-      function closeEditModal() {
+      function closeEditModal(forceClose) {
+        var saveBtn = $("btn-save-edit");
+        if (forceClose !== true && saveBtn && saveBtn.disabled) return;
         editingEntryId = null;
         $("edit-modal").hidden = true;
         $("edit-error").textContent = "";
+        setEditSaveBusy(false);
+      }
+
+      function openDeleteConfirmModal(entry) {
+        deleteConfirmEntry = entry;
+        var lead = $("delete-confirm-lead");
+        if (lead) {
+          lead.textContent =
+            "Remove the attendance record for " +
+            formatDate(entry.date) +
+            " (" +
+            formatTime(entry.timeIn) +
+            " – " +
+            formatTime(entry.timeOut) +
+            ")? This cannot be undone.";
+        }
+        var cBtn = $("btn-delete-confirm");
+        var xBtn = $("btn-delete-cancel");
+        if (cBtn) cBtn.disabled = false;
+        if (xBtn) xBtn.disabled = false;
+        $("delete-confirm-modal").hidden = false;
+        if (cBtn) cBtn.focus();
+      }
+
+      function closeDeleteConfirmModal() {
+        deleteConfirmEntry = null;
+        $("delete-confirm-modal").hidden = true;
       }
 
       function render(entries) {
@@ -646,6 +832,7 @@
         tbody.innerHTML = "";
 
         if (!entries.length) {
+          cachedEntriesList = [];
           empty.hidden = false;
           table.hidden = true;
           countEl.textContent = "";
@@ -655,6 +842,8 @@
         empty.hidden = true;
         table.hidden = false;
         countEl.textContent = entries.length + " record" + (entries.length === 1 ? "" : "s");
+
+        cachedEntriesList = entries.slice();
 
         var sorted = sortEntries(entries);
         for (var i = 0; i < sorted.length; i++) {
@@ -694,20 +883,7 @@
               openEditModal(entry);
             });
             delBtn.addEventListener("click", function () {
-              if (!confirm("Delete this attendance record? This cannot be undone.")) return;
-              OJTApp.init()
-                .then(function () {
-                  return OJTApp.deleteEntry(entry.id, currentUser);
-                })
-                .then(function () {
-                  return OJTApp.getAllEntries(currentUser);
-                })
-                .then(function (list) {
-                  render(list || []);
-                })
-                .catch(function (err) {
-                  alert((err && err.message) || "Could not delete.");
-                });
+              openDeleteConfirmModal(entry);
             });
           })(e);
         }
@@ -747,7 +923,55 @@
           if (ev.target === $("edit-modal")) closeEditModal();
         });
         document.addEventListener("keydown", function (ev) {
-          if (ev.key === "Escape" && !$("edit-modal").hidden) closeEditModal();
+          if (ev.key !== "Escape") return;
+          if (!$("delete-confirm-modal").hidden) {
+            closeDeleteConfirmModal();
+            return;
+          }
+          if (!$("edit-modal").hidden) closeEditModal();
+        });
+
+        $("btn-delete-cancel").addEventListener("click", closeDeleteConfirmModal);
+        $("delete-confirm-modal").addEventListener("click", function (ev) {
+          if (ev.target === $("delete-confirm-modal")) closeDeleteConfirmModal();
+        });
+
+        $("btn-delete-confirm").addEventListener("click", function () {
+          if (!deleteConfirmEntry || !currentUser) return;
+          var entry = deleteConfirmEntry;
+          var confirmBtn = $("btn-delete-confirm");
+          var cancelBtn = $("btn-delete-cancel");
+          if (confirmBtn) confirmBtn.disabled = true;
+          if (cancelBtn) cancelBtn.disabled = true;
+          OJTApp.init()
+            .then(function () {
+              return OJTApp.deleteEntry(entry.id, currentUser);
+            })
+            .then(function () {
+              return OJTApp.getAllEntries(currentUser);
+            })
+            .then(function (list) {
+              closeDeleteConfirmModal();
+              if (typeof OJTToast !== "undefined" && OJTToast.deleted) {
+                OJTToast.deleted("Entry deleted successfully.");
+              } else if (typeof OJTToast !== "undefined" && OJTToast.show) {
+                OJTToast.show({
+                  type: "deleted",
+                  title: "Deleted",
+                  message: "Entry deleted successfully.",
+                  duration: 4500
+                });
+              }
+              render(list || []);
+            })
+            .catch(function (err) {
+              alert((err && err.message) || "Could not delete.");
+              closeDeleteConfirmModal();
+            })
+            .then(function () {
+              if (confirmBtn) confirmBtn.disabled = false;
+              if (cancelBtn) cancelBtn.disabled = false;
+            });
         });
 
         $("form-edit").addEventListener("submit", function (e) {
@@ -758,23 +982,45 @@
             errEl.textContent = "Session error. Reload the page.";
             return;
           }
+          var saveBtn = $("btn-save-edit");
+          if (saveBtn && saveBtn.disabled) {
+            return;
+          }
+
+          function finishEditSave() {
+            setEditSaveBusy(false);
+          }
+
+          setEditSaveBusy(true);
+
           OJTApp.init()
             .then(function () {
-              return OJTApp.getAllEntries(currentUser);
-            })
-            .then(function (entries) {
-              var existing = findEntryById(entries || [], editingEntryId);
-              if (!existing) {
-                errEl.textContent = "Entry not found.";
+              var existing = editingEntrySnapshot;
+              if (
+                !existing ||
+                String(existing.id) !== String(editingEntryId)
+              ) {
+                errEl.textContent = "Entry not found. Close the dialog and try again.";
+                finishEditSave();
                 return Promise.resolve();
               }
               var built = buildEntryFromEditForm(existing);
               if (built.error) {
                 errEl.textContent = built.error;
+                finishEditSave();
                 return Promise.resolve();
               }
               return OJTApp.updateEntry(built.entry, currentUser).then(function () {
-                closeEditModal();
+                if (typeof OJTToast !== "undefined" && OJTToast.success) {
+                  OJTToast.success("Entry saved successfully!");
+                }
+                closeEditModal(true);
+                var base =
+                  cachedEntriesList && cachedEntriesList.length
+                    ? cachedEntriesList.slice()
+                    : [];
+                var merged = replaceEntryInList(base, built.entry);
+                render(merged);
                 return OJTApp.getAllEntries(currentUser);
               });
             })
@@ -784,7 +1030,8 @@
             })
             .catch(function (err) {
               errEl.textContent = (err && err.message) || "Could not save changes.";
-            });
+            })
+            .then(finishEditSave);
         });
 
         OJTApp.init()
